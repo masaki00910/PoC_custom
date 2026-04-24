@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+Thumbs.db
+.vite/
+coverage/
+InsuranceCheckControl/types/api.generated.ts

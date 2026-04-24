@@ -1,0 +1,210 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "ca_document_importid",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "category",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "contents",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "入力を指定してください",
+                  "title": "問い合わせ管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "現在の時刻": {
+              "type": "Expression",
+              "kind": "CurrentTime",
+              "inputs": {}
+            },
+            "問い合わせ管理テーブル登録用": {
+              "type": "Compose",
+              "inputs": {
+                "ca_error_list_management_id@odata.bind": "ca_document_imports(@{triggerBody()?['text']})",
+                "ca_status_updated_datetime": "@{body('現在の時刻')}",
+                "ca_processing_status": "問い合わせ起票",
+                "ca_inquiry_category": "@{triggerBody()?['text_1']}",
+                "ca_inquiry_content": "@{triggerBody()?['text_2']}",
+                "ca_inquiry_datetime": "@{body('現在の時刻')}"
+              },
+              "runAfter": {
+                "現在の時刻": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "新しい行を追加：問い合わせ管理": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_3']",
+                  "item": "@outputs('問い合わせ管理テーブル登録用')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "問い合わせ管理テーブル登録用": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "正常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Success",
+                  "errorresult": "N/A"
+                }
+              },
+              "runAfter": {
+                "新しい行を追加：問い合わせ管理": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "81c94f73-dd52-465c-ad3b-a4686da63cc3"
+              }
+            }
+          },
+          "runAfter": {}
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "81c94f73-dd52-465c-ad3b-a4686da63cc3"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "SUCCEEDED"
+            ]
+          }
+        }
+      },
+      "outputs": {},
+      "description": "When an agent calls the flow and send back a response."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

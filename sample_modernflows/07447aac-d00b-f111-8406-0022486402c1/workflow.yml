@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{07447aac-d00b-f111-8406-0022486402c1}'
+  '@Name': 【工藤修正中】F05-005_項目補正-住所回復処理
+  JsonFileName: /modernflows/07447aac-d00b-f111-8406-0022486402c1/F05-005_--07447AAC-D00B-F111-8406-0022486402C1.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 0
+  StatusCode: 1
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【工藤修正中】F05-005_項目補正-住所回復処理

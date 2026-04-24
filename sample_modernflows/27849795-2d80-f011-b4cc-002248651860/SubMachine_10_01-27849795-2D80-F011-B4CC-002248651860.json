@@ -1,0 +1,1611 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_00509"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_sharepointonline-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "ca_5dffb6dcc4684727a1efd00b3c67f7b2"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_commondataserviceforapps-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "ca_sharedcommondataserviceforapps_69184"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "帳票点検画面 (ca_CanvasAppIDFormVerification)": {
+          "defaultValue": "0c63d1e2-2619-461a-9b76-211b4d1f0814",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_CanvasAppIDFormVerification"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "",
+                  "title": "FileURL",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "",
+                  "title": "書類選択GUID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "ファイル識別子",
+                  "title": "ファイル識別子",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "入力を指定してください",
+                  "title": "FileName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Power_App_またはフローに応答する": {
+          "runAfter": {
+            "メイン処理": [
+              "Succeeded"
+            ]
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "title": "status",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "status": "200"
+            }
+          }
+        },
+        "A-2-2[変数を初期化する]": {
+          "runAfter": {
+            "スイッチ：ファイルバリデーション": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "35fb113a-16ae-4e2b-9865-1cfbef298bb0"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "lineCounter",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "A-2-1[変数を初期化する]": {
+          "runAfter": {
+            "A-2-2[変数を初期化する]": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fe7e55ee-ef03-4fcf-889a-ef8305b75b5f"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "index",
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "変数を初期化する": {
+          "runAfter": {
+            "A-2-1[変数を初期化する]": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4c4f5483-3bd8-40da-a94f-8a9a449bedcb"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "resultArray",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "DataTest1": {
+          "runAfter": {
+            "変数を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DataTest",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "ナレッジ機能判定変数": {
+          "runAfter": {
+            "DataTest1": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "knowledge",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "retryCount_GenAI": {
+          "runAfter": {
+            "ナレッジ機能判定変数": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "retryCountGenAI",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "isGenAiSuccess": {
+          "runAfter": {
+            "retryCount_GenAI": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "isGenAiSuccess",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          }
+        },
+        "genAiResult": {
+          "runAfter": {
+            "isGenAiSuccess": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "genAiResult",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "データ整形用配列": {
+          "runAfter": {
+            "genAiResult": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varJsonArray",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "ファイル_コンテンツの取得": {
+          "runAfter": {},
+          "metadata": {
+            "%252fShared%2bDocuments%252fGeneral%252fOCR-SampleData%252f%25e8%25ab%258b%25e6%25b1%2582%25e6%259b%25b8%25e3%2582%25b5%25e3%2583%25b3%25e3%2583%2595%25e3%2582%259a%25e3%2583%25ab%25ef%25bc%2593.png": "/Shared Documents/General/OCR-SampleData/請求書サンプル３.png"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://ts.accenture.com/sites/TfLSDigitalDelivery",
+              "id": "@triggerBody()?['text_2']",
+              "inferContentType": true
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetFileContent",
+              "connectionName": "shared_sharepointonline"
+            }
+          }
+        },
+        "スイッチ：ファイルバリデーション": {
+          "runAfter": {
+            "拡張子加工変数": [
+              "Succeeded"
+            ]
+          },
+          "cases": {
+            "png": {
+              "case": "image/png",
+              "actions": {
+                "変数の設定_1": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "formTypeString",
+                    "value": "@outputs('ファイル_コンテンツの取得')?['body']?['$content-type']"
+                  }
+                }
+              }
+            },
+            "jpeg・jpg": {
+              "case": "image/jpeg",
+              "actions": {
+                "変数の設定_2": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "formTypeString",
+                    "value": "@outputs('ファイル_コンテンツの取得')?['body']?['$content-type']"
+                  }
+                }
+              }
+            },
+            "pdf": {
+              "case": "application/pdf",
+              "actions": {
+                "変数の設定_3": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "formTypeString",
+                    "value": "@outputs('ファイル_コンテンツの取得')?['body']?['$content-type']"
+                  }
+                }
+              }
+            },
+            "image/tiff": {
+              "case": "image/tiff",
+              "actions": {
+                "変数の設定_4": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "formTypeString",
+                    "value": "@outputs('ファイル_コンテンツの取得')?['body']?['$content-type']"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "actions": {
+              "エラー通知": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "appnotifications",
+                    "item/title": "サポートされないファイル形式です。",
+                    "item/body": "ファイル名前：\n\nサポートされるファイル種類：\n*.png、*.jpeg、*.jpg、*.pdf",
+                    "item/data": "{\n  \"entityName\": \"書類選択\",\n  \"recordId\": \"\"\n}",
+                    "item/icontype": 100000002,
+                    "item/priority": 200000001
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "CreateRecord",
+                    "connectionName": "shared_commondataserviceforapps"
+                  }
+                }
+              },
+              "終了": {
+                "runAfter": {
+                  "エラー通知": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Succeeded"
+                }
+              }
+            }
+          },
+          "expression": "@outputs('ファイル_コンテンツの取得')?['body']?['$content-type']",
+          "type": "Switch"
+        },
+        "拡張子加工変数": {
+          "runAfter": {
+            "ファイル_コンテンツの取得": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "formTypeString",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "メイン処理": {
+          "actions": {
+            "スイッチ": {
+              "runAfter": {
+                "ID_でコード管理取得": [
+                  "Succeeded"
+                ]
+              },
+              "cases": {
+                "10.請求書の場合": {
+                  "case": "10.請求書",
+                  "actions": {
+                    "A-1[AI_OCR帳票読取り]": {
+                      "metadata": {
+                        "operationMetadataId": "9ea264ca-b8e1-4ca9-9328-9b8590582f6c",
+                        "flowSystemMetadata": {
+                          "portalOperationApiDisplayNameOverride": "AI Builder",
+                          "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                          "portalOperationBrandColorOverride": "#0A76C4",
+                          "portalOperationApiTierOverride": "Standard",
+                          "portalOperationId": "aibuilderpredict_textrecognition",
+                          "portalOperationGroup": "aibuilder"
+                        }
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "item/requestv2/base64Encoded": "@body('ファイル_コンテンツの取得')",
+                          "recordId": "86419a67-205a-454f-b6fc-601394f2786d"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "aibuilderpredict_textrecognition",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      }
+                    },
+                    "A-2[帳票一覧レコードを作成]": {
+                      "runAfter": {
+                        "A-1[AI_OCR帳票読取り]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "c0210bf7-32c7-47a5-8f5b-f444d04328b2"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "ca_document_imports",
+                          "item/ca_appid": "@parameters('帳票点検画面 (ca_CanvasAppIDFormVerification)')",
+                          "item/ca_processing_status": "01.AIOCR処理中",
+                          "item/ca_import_date": "@formatDateTime(convertFromUtc(utcNow(), 'Tokyo Standard Time'), 'yyyy-MM-ddTHH:mm:ss')",
+                          "item/ca_from_name": "@triggerBody()?['text_3']",
+                          "item/ca_document_id_ca_document_selection@odata.bind": "ca_document_selections(@{outputs('IDで書類選択取得')?['body/ca_document_selectionid']})",
+                          "item/ca_document_url": "@triggerBody()?['text']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      }
+                    },
+                    "A-3[For_each_(ページごと)]": {
+                      "foreach": "@outputs('A-1[AI_OCR帳票読取り]')?['body/responsev2/predictionOutput/results']",
+                      "actions": {
+                        "A-3-3[選択]": {
+                          "runAfter": {
+                            "A-3-2[変数の設定]": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "936e0b84-92bb-44d0-b9c2-c740b27da7c9"
+                          },
+                          "type": "Select",
+                          "inputs": {
+                            "from": "@item()?['lines']",
+                            "select": {
+                              "text": "@item()?['text']",
+                              "left": "@item()?['boundingBox/left']",
+                              "top": "@item()?['boundingBox/top']",
+                              "width": "@item()?['boundingBox/width']",
+                              "height": "@item()?['boundingBox/height']"
+                            }
+                          }
+                        },
+                        "A-3-1[変数の値を増やす]": {
+                          "metadata": {
+                            "operationMetadataId": "9dce2740-f788-4096-ad17-c57428816650"
+                          },
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "index",
+                            "value": 1
+                          }
+                        },
+                        "A-3-4[それぞれに適用する]": {
+                          "foreach": "@body('A-3-3[選択]')",
+                          "actions": {
+                            "A-3-4-2[変数の値を増やす]": {
+                              "runAfter": {
+                                "配列にデータ追加_": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "32d237cb-633a-4ac6-a2fd-373168b26f7d"
+                              },
+                              "type": "IncrementVariable",
+                              "inputs": {
+                                "name": "lineCounter",
+                                "value": 1
+                              }
+                            },
+                            "OCR結果一時格納": {
+                              "type": "Compose",
+                              "inputs": {
+                                "odataId": "@outputs('A-2[帳票一覧レコードを作成]')?['body/@odata.id']",
+                                "text": "@item()?['text']",
+                                "height": "@item()?['height']",
+                                "left": "@item()?['left']",
+                                "top": "@item()?['top']",
+                                "width": "@item()?['width']"
+                              }
+                            },
+                            "配列にデータ追加_": {
+                              "runAfter": {
+                                "OCR結果一時格納": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "varJsonArray",
+                                "value": "@outputs('OCR結果一時格納')"
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "A-3-3[選択]": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d6a08582-082e-42c5-8816-3b8655c766a8"
+                          },
+                          "type": "Foreach",
+                          "runtimeConfiguration": {
+                            "concurrency": {
+                              "repetitions": 50
+                            }
+                          }
+                        },
+                        "A-3-2[変数の設定]": {
+                          "runAfter": {
+                            "A-3-1[変数の値を増やす]": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "e16e6380-196c-4ce5-b029-6b378b03c0b9"
+                          },
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "lineCounter",
+                            "value": 1
+                          }
+                        },
+                        "プロンプトを実行する": {
+                          "runAfter": {
+                            "作成": [
+                              "Succeeded"
+                            ]
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "recordId": "a5cd656e-4f0c-4b52-8359-96a2f2b1a186",
+                              "item/requestv2/_30b5_30f3_30d7_30eb_30c7_30fc_30bf": "@outputs('プロンプト取得')?['body/ca_additionalinfo']",
+                              "item/requestv2/_30d7_30ed_30f3_30d7_30c8": "@outputs('プロンプト取得')?['body/ca_contents']",
+                              "item/requestv2/_5165_529b_30c7_30fc_30bf": "@outputs('作成')"
+                            },
+                            "host": {
+                              "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                              "operationId": "aibuilderpredict_customprompt",
+                              "connectionName": "shared_commondataserviceforapps"
+                            },
+                            "retryPolicy": {
+                              "type": "none"
+                            }
+                          }
+                        },
+                        "AI出力結果解析": {
+                          "runAfter": {
+                            "プロンプトを実行する": [
+                              "Succeeded"
+                            ]
+                          },
+                          "type": "ParseJson",
+                          "inputs": {
+                            "content": "@outputs('プロンプトを実行する')?['body/responsev2/predictionOutput/text']",
+                            "schema": {
+                              "result": [
+                                {
+                                  "key": "帳票種別",
+                                  "item": {
+                                    "value": "請求書",
+                                    "height": 0.033203125,
+                                    "left": 0.45649717514124294,
+                                    "top": 0.0078125,
+                                    "width": 0.096045197740112942
+                                  }
+                                },
+                                {
+                                  "key": "宛先_会社名",
+                                  "item": {
+                                    "value": "株式会社 〇〇〇〇〇〇",
+                                    "height": 0.029296875,
+                                    "left": 0.10056497175141244,
+                                    "top": 0.0869140625,
+                                    "width": 0.28361581920903955
+                                  }
+                                },
+                                {
+                                  "key": "宛先_敬称",
+                                  "item": {
+                                    "value": "御中",
+                                    "height": 0.0263671875,
+                                    "left": 0.41242937853107342,
+                                    "top": 0.087890625,
+                                    "width": 0.06101694915254241
+                                  }
+                                },
+                                {
+                                  "key": "請求書番号_ラベル",
+                                  "item": {
+                                    "value": "請求書No.",
+                                    "height": 0.0244140625,
+                                    "left": 0.66214689265536719,
+                                    "top": 0.0908203125,
+                                    "width": 0.11186440677966103
+                                  }
+                                },
+                                {
+                                  "key": "請求書番号",
+                                  "item": {
+                                    "value": "ABC0022",
+                                    "height": 0.021484375,
+                                    "left": 0.87344632768361585,
+                                    "top": 0.0908203125,
+                                    "width": 0.10621468926553668
+                                  }
+                                },
+                                {
+                                  "key": "請求日_ラベル",
+                                  "item": {
+                                    "value": "請求日",
+                                    "height": 0.0234375,
+                                    "left": 0.70056497175141241,
+                                    "top": 0.1220703125,
+                                    "width": 0.070056497175141286
+                                  }
+                                },
+                                {
+                                  "key": "請求日",
+                                  "item": {
+                                    "value": "2023/11/30",
+                                    "height": 0.0224609375,
+                                    "left": 0.84519774011299431,
+                                    "top": 0.1220703125,
+                                    "width": 0.1322033898305085
+                                  }
+                                },
+                                {
+                                  "key": "請求挨拶文",
+                                  "item": {
+                                    "value": "ご利用ありがとうございます。下記の通り御請求申し上げます。",
+                                    "height": 0.025390625,
+                                    "left": 0.029378531073446328,
+                                    "top": 0.1806640625,
+                                    "width": 0.68135593220338986
+                                  }
+                                },
+                                {
+                                  "key": "請求対象月",
+                                  "item": {
+                                    "value": "11月分",
+                                    "height": 0.0224609375,
+                                    "left": 0.11977401129943503,
+                                    "top": 0.240234375,
+                                    "width": 0.07909604519774012
+                                  }
+                                },
+                                {
+                                  "key": "請求合計金額",
+                                  "item": {
+                                    "value": "131,200",
+                                    "height": 0.0224609375,
+                                    "left": 0.25875706214689265,
+                                    "top": 0.2392578125,
+                                    "width": 0.10621468926553673
+                                  }
+                                },
+                                {
+                                  "key": "請求合計金額_単位",
+                                  "item": {
+                                    "value": "円(税込)",
+                                    "height": 0.0234375,
+                                    "left": 0.42259887005649716,
+                                    "top": 0.2392578125,
+                                    "width": 0.10508474576271193
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_日付",
+                                  "item": {
+                                    "value": "日付",
+                                    "height": 0.0244140625,
+                                    "left": 0.0903954802259887,
+                                    "top": 0.275390625,
+                                    "width": 0.04632768361581921
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_品名",
+                                  "item": {
+                                    "value": "品名",
+                                    "height": 0.0244140625,
+                                    "left": 0.31525423728813562,
+                                    "top": 0.275390625,
+                                    "width": 0.047457627118644041
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_税率",
+                                  "item": {
+                                    "value": "税率",
+                                    "height": 0.0234375,
+                                    "left": 0.49491525423728816,
+                                    "top": 0.2763671875,
+                                    "width": 0.048587570621468956
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_単価",
+                                  "item": {
+                                    "value": "単価",
+                                    "height": 0.0224609375,
+                                    "left": 0.60677966101694913,
+                                    "top": 0.27734375,
+                                    "width": 0.049717514124293816
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_数量",
+                                  "item": {
+                                    "value": "数量",
+                                    "height": 0.0224609375,
+                                    "left": 0.711864406779661,
+                                    "top": 0.2763671875,
+                                    "width": 0.0485875706214689
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_単位",
+                                  "item": {
+                                    "value": "単位",
+                                    "height": 0.0224609375,
+                                    "left": 0.80112994350282485,
+                                    "top": 0.2763671875,
+                                    "width": 0.0474576271186441
+                                  }
+                                },
+                                {
+                                  "key": "明細_見出し_金額",
+                                  "item": {
+                                    "value": "金額",
+                                    "height": 0.0234375,
+                                    "left": 0.903954802259887,
+                                    "top": 0.2763671875,
+                                    "width": 0.05084745762711862
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_日付",
+                                  "item": {
+                                    "value": "11月1日",
+                                    "height": 0.0224609375,
+                                    "left": 0.067796610169491525,
+                                    "top": 0.3115234375,
+                                    "width": 0.089265536723163855
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_品名",
+                                  "item": {
+                                    "value": "小麦粉",
+                                    "height": 0.0224609375,
+                                    "left": 0.20451977401129945,
+                                    "top": 0.3115234375,
+                                    "width": 0.075706214689265527
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_税率注記",
+                                  "item": {
+                                    "value": "※ ※",
+                                    "height": 0.0556640625,
+                                    "left": 0.43502824858757061,
+                                    "top": 0.3115234375,
+                                    "width": 0.022598870056497189
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_税率注記",
+                                  "item": {
+                                    "value": "※",
+                                    "height": 0.0224609375,
+                                    "left": 0.43163841807909603,
+                                    "top": 0.3115234375,
+                                    "width": 0.029378531073446346
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_税率",
+                                  "item": {
+                                    "value": "8%",
+                                    "height": 0.01953125,
+                                    "left": 0.50734463276836161,
+                                    "top": 0.3134765625,
+                                    "width": 0.028248587570621431
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_単価",
+                                  "item": {
+                                    "value": "1,000",
+                                    "height": 0.01953125,
+                                    "left": 0.62146892655367236,
+                                    "top": 0.3125,
+                                    "width": 0.059887005649717495
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_数量",
+                                  "item": {
+                                    "value": "5",
+                                    "height": 0.0224609375,
+                                    "left": 0.72655367231638424,
+                                    "top": 0.3115234375,
+                                    "width": 0.01807909604519764
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_単位",
+                                  "item": {
+                                    "value": "個",
+                                    "height": 0.0234375,
+                                    "left": 0.81242937853107344,
+                                    "top": 0.3115234375,
+                                    "width": 0.027118644067796627
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#1_金額",
+                                  "item": {
+                                    "value": "5,000",
+                                    "height": 0.021484375,
+                                    "left": 0.90847457627118644,
+                                    "top": 0.3115234375,
+                                    "width": 0.064406779661016933
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_日付",
+                                  "item": {
+                                    "value": "11月1日",
+                                    "height": 0.021484375,
+                                    "left": 0.0711864406779661,
+                                    "top": 0.345703125,
+                                    "width": 0.084745762711864417
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_品名",
+                                  "item": {
+                                    "value": "牛肉",
+                                    "height": 0.0224609375,
+                                    "left": 0.207909604519774,
+                                    "top": 0.345703125,
+                                    "width": 0.048587570621468928
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_税率",
+                                  "item": {
+                                    "value": "8%",
+                                    "height": 0.01953125,
+                                    "left": 0.50169491525423726,
+                                    "top": 0.3466796875,
+                                    "width": 0.0361581920903955
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_単価",
+                                  "item": {
+                                    "value": "2,500",
+                                    "height": 0.021484375,
+                                    "left": 0.61807909604519773,
+                                    "top": 0.345703125,
+                                    "width": 0.064406779661016933
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_数量",
+                                  "item": {
+                                    "value": "4",
+                                    "height": 0.01953125,
+                                    "left": 0.727683615819209,
+                                    "top": 0.345703125,
+                                    "width": 0.018079096045197751
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_単位",
+                                  "item": {
+                                    "value": "個",
+                                    "height": 0.0234375,
+                                    "left": 0.81129943502824864,
+                                    "top": 0.3447265625,
+                                    "width": 0.028248587570621431
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#2_金額",
+                                  "item": {
+                                    "value": "10,000",
+                                    "height": 0.021484375,
+                                    "left": 0.89717514124293785,
+                                    "top": 0.345703125,
+                                    "width": 0.075706214689265527
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_日付",
+                                  "item": {
+                                    "value": "11月2日",
+                                    "height": 0.021484375,
+                                    "left": 0.068926553672316385,
+                                    "top": 0.3798828125,
+                                    "width": 0.087005649717514136
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_品名",
+                                  "item": {
+                                    "value": "キッチンペーパー",
+                                    "height": 0.01953125,
+                                    "left": 0.21016949152542372,
+                                    "top": 0.3798828125,
+                                    "width": 0.19209039548022602
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_税率",
+                                  "item": {
+                                    "value": "10%",
+                                    "height": 0.0205078125,
+                                    "left": 0.49830508474576274,
+                                    "top": 0.3798828125,
+                                    "width": 0.046327683615819182
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_単価",
+                                  "item": {
+                                    "value": "1,000",
+                                    "height": 0.0205078125,
+                                    "left": 0.62033898305084745,
+                                    "top": 0.3798828125,
+                                    "width": 0.06101694915254241
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_数量",
+                                  "item": {
+                                    "value": "2",
+                                    "height": 0.021484375,
+                                    "left": 0.727683615819209,
+                                    "top": 0.380859375,
+                                    "width": 0.019209039548022555
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_単位",
+                                  "item": {
+                                    "value": "個 式",
+                                    "height": 0.0546875,
+                                    "left": 0.81355932203389836,
+                                    "top": 0.3798828125,
+                                    "width": 0.022598870056497078
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#3_金額",
+                                  "item": {
+                                    "value": "2,000",
+                                    "height": 0.0205078125,
+                                    "left": 0.90847457627118644,
+                                    "top": 0.3798828125,
+                                    "width": 0.063276836158192129
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#4_日付",
+                                  "item": {
+                                    "value": "11月3日",
+                                    "height": 0.0224609375,
+                                    "left": 0.068926553672316385,
+                                    "top": 0.4130859375,
+                                    "width": 0.085875706214689276
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#4_品名",
+                                  "item": {
+                                    "value": "業務用IH調理器具",
+                                    "height": 0.0224609375,
+                                    "left": 0.207909604519774,
+                                    "top": 0.4130859375,
+                                    "width": 0.19435028248587574
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#4_税率",
+                                  "item": {
+                                    "value": "10%",
+                                    "height": 0.01953125,
+                                    "left": 0.49491525423728816,
+                                    "top": 0.4150390625,
+                                    "width": 0.048587570621468956
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#4_単価",
+                                  "item": {
+                                    "value": "78,000",
+                                    "height": 0.021484375,
+                                    "left": 0.60338983050847461,
+                                    "top": 0.4140625,
+                                    "width": 0.07909604519774005
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#4_数量",
+                                  "item": {
+                                    "value": "1",
+                                    "height": 0.021484375,
+                                    "left": 0.72881355932203384,
+                                    "top": 0.4140625,
+                                    "width": 0.018079096045197751
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#4_金額",
+                                  "item": {
+                                    "value": "78,000",
+                                    "height": 0.0205078125,
+                                    "left": 0.896045197740113,
+                                    "top": 0.4140625,
+                                    "width": 0.075706214689265527
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_日付",
+                                  "item": {
+                                    "value": "11月3日",
+                                    "height": 0.0224609375,
+                                    "left": 0.068926553672316385,
+                                    "top": 0.4482421875,
+                                    "width": 0.091525423728813546
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_品名",
+                                  "item": {
+                                    "value": "伊勢海老鍋セット",
+                                    "height": 0.0234375,
+                                    "left": 0.21016949152542372,
+                                    "top": 0.4462890625,
+                                    "width": 0.18644067796610173
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_税率",
+                                  "item": {
+                                    "value": "8%",
+                                    "height": 0.0205078125,
+                                    "left": 0.50056497175141246,
+                                    "top": 0.4482421875,
+                                    "width": 0.031638418079096065
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_単価",
+                                  "item": {
+                                    "value": "5,000",
+                                    "height": 0.0205078125,
+                                    "left": 0.61807909604519773,
+                                    "top": 0.4482421875,
+                                    "width": 0.062146892655367214
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_数量",
+                                  "item": {
+                                    "value": "5",
+                                    "height": 0.0205078125,
+                                    "left": 0.72655367231638424,
+                                    "top": 0.44921875,
+                                    "width": 0.01807909604519764
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_単位",
+                                  "item": {
+                                    "value": "セット",
+                                    "height": 0.0234375,
+                                    "left": 0.78870056497175145,
+                                    "top": 0.447265625,
+                                    "width": 0.07118644067796609
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_金額",
+                                  "item": {
+                                    "value": "25,000",
+                                    "height": 0.0205078125,
+                                    "left": 0.89491525423728813,
+                                    "top": 0.4482421875,
+                                    "width": 0.074576271186440724
+                                  }
+                                },
+                                {
+                                  "key": "請求明細#5_税率注記",
+                                  "item": {
+                                    "value": "※",
+                                    "height": 0.021484375,
+                                    "left": 0.43276836158192089,
+                                    "top": 0.447265625,
+                                    "width": 0.028248587570621486
+                                  }
+                                },
+                                {
+                                  "key": "合計_税抜ラベル",
+                                  "item": {
+                                    "value": "合計(税抜)",
+                                    "height": 0.0244140625,
+                                    "left": 0.085875706214689262,
+                                    "top": 0.685546875,
+                                    "width": 0.11412429378531075
+                                  }
+                                },
+                                {
+                                  "key": "合計_税抜金額",
+                                  "item": {
+                                    "value": "120,000",
+                                    "height": 0.0224609375,
+                                    "left": 0.29830508474576273,
+                                    "top": 0.6875,
+                                    "width": 0.10847457627118645
+                                  }
+                                },
+                                {
+                                  "key": "合計_税抜金額_単位",
+                                  "item": {
+                                    "value": "円 円 円円",
+                                    "height": 0.130859375,
+                                    "left": 0.42259887005649716,
+                                    "top": 0.68359375,
+                                    "width": 0.025988700564971767
+                                  }
+                                },
+                                {
+                                  "key": "消費税額計_ラベル",
+                                  "item": {
+                                    "value": "消費税額計",
+                                    "height": 0.0244140625,
+                                    "left": 0.52090395480225993,
+                                    "top": 0.685546875,
+                                    "width": 0.12203389830508471
+                                  }
+                                },
+                                {
+                                  "key": "消費税額計",
+                                  "item": {
+                                    "value": "11,200",
+                                    "height": 0.0224609375,
+                                    "left": 0.76723163841807906,
+                                    "top": 0.6865234375,
+                                    "width": 0.092655367231638475
+                                  }
+                                },
+                                {
+                                  "key": "消費税額計_単位",
+                                  "item": {
+                                    "value": "円 円円円",
+                                    "height": 0.1279296875,
+                                    "left": 0.87796610169491529,
+                                    "top": 0.685546875,
+                                    "width": 0.022598870056497189
+                                  }
+                                },
+                                {
+                                  "key": "税区分10%_ラベル",
+                                  "item": {
+                                    "value": "10% 対象",
+                                    "height": 0.0205078125,
+                                    "left": 0.15254237288135594,
+                                    "top": 0.724609375,
+                                    "width": 0.10395480225988699
+                                  }
+                                },
+                                {
+                                  "key": "税区分10%_金額",
+                                  "item": {
+                                    "value": "80,000",
+                                    "height": 0.0205078125,
+                                    "left": 0.34011299435028247,
+                                    "top": 0.724609375,
+                                    "width": 0.080225988700564965
+                                  }
+                                },
+                                {
+                                  "key": "税区分10%_税名",
+                                  "item": {
+                                    "value": "消費税",
+                                    "height": 0.021484375,
+                                    "left": 0.61807909604519773,
+                                    "top": 0.724609375,
+                                    "width": 0.068926553672316371
+                                  }
+                                },
+                                {
+                                  "key": "税区分10%_消費税額",
+                                  "item": {
+                                    "value": "8,000",
+                                    "height": 0.021484375,
+                                    "left": 0.8067796610169492,
+                                    "top": 0.7236328125,
+                                    "width": 0.063276836158192018
+                                  }
+                                },
+                                {
+                                  "key": "税区分8%_ラベル",
+                                  "item": {
+                                    "value": "8% 対象",
+                                    "height": 0.0224609375,
+                                    "left": 0.16158192090395479,
+                                    "top": 0.7578125,
+                                    "width": 0.097175141242937857
+                                  }
+                                },
+                                {
+                                  "key": "税区分8%_金額",
+                                  "item": {
+                                    "value": "40,000",
+                                    "height": 0.021484375,
+                                    "left": 0.33898305084745761,
+                                    "top": 0.7587890625,
+                                    "width": 0.076836158192090387
+                                  }
+                                },
+                                {
+                                  "key": "税区分8%_税名",
+                                  "item": {
+                                    "value": "消費税",
+                                    "height": 0.021484375,
+                                    "left": 0.61694915254237293,
+                                    "top": 0.7578125,
+                                    "width": 0.07118644067796609
+                                  }
+                                },
+                                {
+                                  "key": "税区分8%_消費税額",
+                                  "item": {
+                                    "value": "3,200",
+                                    "height": 0.021484375,
+                                    "left": 0.80451977401129948,
+                                    "top": 0.7578125,
+                                    "width": 0.064406779661016933
+                                  }
+                                },
+                                {
+                                  "key": "税区分0%_ラベル",
+                                  "item": {
+                                    "value": "0% 対象",
+                                    "height": 0.0224609375,
+                                    "left": 0.16384180790960451,
+                                    "top": 0.7919921875,
+                                    "width": 0.092655367231638419
+                                  }
+                                },
+                                {
+                                  "key": "税区分0%_金額",
+                                  "item": {
+                                    "value": "0",
+                                    "height": 0.017578125,
+                                    "left": 0.4,
+                                    "top": 0.7958984375,
+                                    "width": 0.015819209039547977
+                                  }
+                                },
+                                {
+                                  "key": "税区分0%_税名",
+                                  "item": {
+                                    "value": "消費税",
+                                    "height": 0.025390625,
+                                    "left": 0.61468926553672321,
+                                    "top": 0.791015625,
+                                    "width": 0.075706214689265527
+                                  }
+                                },
+                                {
+                                  "key": "税区分0%_消費税額",
+                                  "item": {
+                                    "value": "0",
+                                    "height": 0.0166015625,
+                                    "left": 0.85310734463276838,
+                                    "top": 0.794921875,
+                                    "width": 0.014689265536723117
+                                  }
+                                },
+                                {
+                                  "key": "注記_軽減税率",
+                                  "item": {
+                                    "value": "※軽減税率対象",
+                                    "height": 0.025390625,
+                                    "left": 0.028248587570621469,
+                                    "top": 0.8251953125,
+                                    "width": 0.17062146892655369
+                                  }
+                                },
+                                {
+                                  "key": "発行者_社名・部署",
+                                  "item": {
+                                    "value": "△△商事株式会社 · 購買部(XX)",
+                                    "height": 0.0234375,
+                                    "left": 0.62485875706214689,
+                                    "top": 0.8583984375,
+                                    "width": 0.35254237288135593
+                                  }
+                                },
+                                {
+                                  "key": "発行者_住所",
+                                  "item": {
+                                    "value": "〒10X-XXXX 東京都港区XX1-2-4",
+                                    "height": 0.0234375,
+                                    "left": 0.6022598870056497,
+                                    "top": 0.8916015625,
+                                    "width": 0.37627118644067803
+                                  }
+                                },
+                                {
+                                  "key": "発行者_TEL",
+                                  "item": {
+                                    "value": "TEL : 03-1234-XXXX",
+                                    "height": 0.0205078125,
+                                    "left": 0.74350282485875707,
+                                    "top": 0.9267578125,
+                                    "width": 0.23615819209039546
+                                  }
+                                },
+                                {
+                                  "key": "登録番号_ラベル",
+                                  "item": {
+                                    "value": "登録番号",
+                                    "height": 0.021484375,
+                                    "left": 0.592090395480226,
+                                    "top": 0.9619140625,
+                                    "width": 0.0971751412429378
+                                  }
+                                },
+                                {
+                                  "key": "登録番号",
+                                  "item": {
+                                    "value": "T 1234567890XXX",
+                                    "height": 0.0205078125,
+                                    "left": 0.75819209039548019,
+                                    "top": 0.962890625,
+                                    "width": 0.20790960451977403
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "解析結果をループ": {
+                          "foreach": "@body('AI出力結果解析')?['result']",
+                          "actions": {
+                            "AIOCR読取結果作成": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "ca_document_items",
+                                  "item/ca_document_id@odata.bind": "@outputs('A-2[帳票一覧レコードを作成]')?['body/@odata.id']",
+                                  "item/ca_document_item": "@items('解析結果をループ')?['key']",
+                                  "item/ca_document_value": "@items('解析結果をループ')?['item']?['value']",
+                                  "item/ca_height": "@items('解析結果をループ')?['item']?['height']",
+                                  "item/ca_left": "@items('解析結果をループ')?['item']?['left']",
+                                  "item/ca_top": "@items('解析結果をループ')?['item']?['top']",
+                                  "item/ca_width": "@items('解析結果をループ')?['item']?['width']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "CreateRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "AI出力結果解析": [
+                              "Succeeded"
+                            ]
+                          },
+                          "type": "Foreach",
+                          "runtimeConfiguration": {
+                            "concurrency": {
+                              "repetitions": 50
+                            }
+                          }
+                        },
+                        "プロンプト取得": {
+                          "runAfter": {
+                            "A-3-4[それぞれに適用する]": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "327a8838-5185-4d9c-a644-48296e5fc57b"
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "ca_code_managements",
+                              "recordId": "@outputs('IDで書類選択取得')?['body/_ca_aiconfig_value']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "GetItem",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          }
+                        },
+                        "作成": {
+                          "runAfter": {
+                            "プロンプト取得": [
+                              "Succeeded"
+                            ]
+                          },
+                          "type": "Compose",
+                          "inputs": "@string(variables('varJsonArray'))"
+                        }
+                      },
+                      "runAfter": {
+                        "添付ファイルの追加": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "73d29e26-aab4-4d96-b002-4bf2fdf39794"
+                      },
+                      "type": "Foreach",
+                      "runtimeConfiguration": {
+                        "concurrency": {
+                          "repetitions": 50
+                        }
+                      }
+                    },
+                    "項目の作成": {
+                      "runAfter": {
+                        "A-2[帳票一覧レコードを作成]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://ts.accenture.com/sites/TfLSDigitalDelivery",
+                          "table": "2456a847-ab2a-4a11-a1c6-beeb18f2642f",
+                          "item/OData__x5e33__x7968_ID": "@outputs('A-2[帳票一覧レコードを作成]')?['body/ca_formid']",
+                          "item/OData__x5e33__x7968__x5206__x985e_": "@outputs('ID_でコード管理取得')?['body/ca_display_name']",
+                          "item/OData__x5e33__x7968__x540d_": "@outputs('A-2[帳票一覧レコードを作成]')?['body/ca_from_name']",
+                          "item/URL": "@triggerBody()?['text']",
+                          "item/OData__x51e6__x7406__x65e5_": "@formatDateTime(convertTimeZone(utcNow(), 'UTC', 'Tokyo Standard Time'), 'yyyy-MM-dd')",
+                          "item/OData__x51e6__x7406__x30b9__x30c6__x30/Value": "処理完了"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "PostItem",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    },
+                    "添付ファイルの追加": {
+                      "runAfter": {
+                        "項目の作成": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://ts.accenture.com/sites/TfLSDigitalDelivery",
+                          "table": "2456a847-ab2a-4a11-a1c6-beeb18f2642f",
+                          "itemId": "@outputs('項目の作成')?['body/ID']",
+                          "displayName": "@triggerBody()?['text_3']",
+                          "body": "@body('ファイル_コンテンツの取得')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "CreateAttachment",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "default": {
+                "actions": {}
+              },
+              "expression": "@outputs('ID_でコード管理取得')?['body/ca_display_name']",
+              "metadata": {
+                "operationMetadataId": "2b602774-24e1-48a0-ae6e-91b11590ff97"
+              },
+              "type": "Switch"
+            },
+            "ID_でコード管理取得": {
+              "runAfter": {
+                "IDで書類選択取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "327a8838-5185-4d9c-a644-48296e5fc57b"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_code_managements",
+                  "recordId": "@outputs('IDで書類選択取得')?['body/_ca_document_value']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "IDで書類選択取得": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_document_selections",
+                  "recordId": "@triggerBody()?['text_1']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "データ整形用配列": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope",
+          "description": "メイン処理"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

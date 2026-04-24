@@ -1,0 +1,27 @@
+Workflow:
+  '@WorkflowId': '{27849795-2d80-f011-b4cc-002248651860}'
+  '@Name': SubMachine_10_01
+  JsonFileName: /modernflows/27849795-2d80-f011-b4cc-002248651860/SubMachine_10_01-27849795-2D80-F011-B4CC-002248651860.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 0
+  StatusCode: 1
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0.0.18
+  IsCustomizable: 1
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': SubMachine_10_01

@@ -1,0 +1,582 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "payload",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "ナレッジ機能",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_5": {
+                  "description": "入力を指定してください",
+                  "title": "AIプロンプト",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "回復後の住所カナ",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "入力を指定してください",
+                  "title": "点検結果テーブル",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "入力を指定してください",
+                  "title": "prompt",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_6": {
+                  "description": "入力を指定してください",
+                  "title": "payload2",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_2",
+                "text_5",
+                "text_1",
+                "text_3",
+                "text_4",
+                "text_6"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "c74eb816-818a-4894-819d-456fbd6ced2b"
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "登録データ取得": {
+              "type": "Compose",
+              "inputs": "@json(triggerBody()?['text'])",
+              "runAfter": {
+                "JSON_の解析(AIプロンプトの情報を解析)": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "POL登録前後判定": {
+              "type": "If",
+              "expression": {
+                "or": [
+                  {
+                    "contains": [
+                      "@outputs('登録データ取得')?[0]?['ca_sts']",
+                      "NB.ﾍﾟﾝﾃﾞｲﾝｸﾞ ｶﾝﾘﾁﾕｳ"
+                    ]
+                  },
+                  {
+                    "contains": [
+                      "@outputs('登録データ取得')?[0]?['ca_sts']",
+                      "ﾌﾋﾞ ｶﾝﾘﾁﾕｳ"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "住所カナ制限文字数を設定（POL登録後）": {
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "制限文字数",
+                    "value": 110
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1ae5b0fc-f29e-4426-b23a-d1ab2f78b4a1"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "住所カナ制限文字数を設定（POL登録前）": {
+                    "type": "IncrementVariable",
+                    "inputs": {
+                      "name": "制限文字数",
+                      "value": 58
+                    },
+                    "metadata": {
+                      "operationMetadataId": "1ae5b0fc-f29e-4426-b23a-d1ab2f78b4a1"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "登録データ取得": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "プロンプトを実行する(文字数超過チェック)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "recordId": "00cbafc4-13b9-49c5-af69-c7b620e7876d",
+                  "item/requestv2/_56de_5fa9_5f8c_306e_4f4f_6240_30ab_30ca": "@triggerBody()?['text_1']",
+                  "item/requestv2/_8a3c_5238_756a_53f7": "@triggerBody()?['text_2']",
+                  "item/requestv2/_5236_9650_6587_5b57_6570": "@variables('制限文字数')",
+                  "item/requestv2/Prompt": "@triggerBody()?['text_5']"
+                },
+                "host": {
+                  "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                  "operationId": "aibuilderpredict_customprompt",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "POL登録前後判定": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c98113a5-4c94-48cf-ba5c-2180e713bc84",
+                "flowSystemMetadata": {
+                  "portalOperationApiDisplayNameOverride": "AI Builder",
+                  "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                  "portalOperationBrandColorOverride": "#0A76C4",
+                  "portalOperationApiTierOverride": "Standard"
+                }
+              }
+            },
+            "正常終了を応答": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "回復結果": {
+                      "title": "回復結果",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorinfo": {
+                      "title": "errorInfo",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "回復結果": "@{outputs('プロンプトを実行する(文字数超過チェック)')?['body/responsev2/predictionOutput/structuredOutput']}",
+                  "status": "Success",
+                  "errorinfo": "N/A"
+                }
+              },
+              "runAfter": {
+                "子フローの実行（F-05-009_項目補正-途中点検結果登録）": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "途中点検結果テーブル登録用": {
+              "type": "Compose",
+              "inputs": {
+                "ca_ai_inspection_details": "@{outputs('プロンプトを実行する(文字数超過チェック)')?['body/responsev2/predictionOutput/text']}",
+                "ca_document_item_id@odata.bind": "ca_document_items(@{body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']})",
+                "ca_prompt_id@odata.bind": "ca_ai_prompts(@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_ai_promptid']})",
+                "ca_document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                "ca_inspection_details": "対象証券番号：@{triggerBody()?['text_2']}　プロンプト：@{triggerBody()?['text_5']}"
+              },
+              "runAfter": {
+                "プロンプトを実行する(文字数超過チェック)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "72af54cf-fdd1-4ffd-be22-7be61c55939e"
+              }
+            },
+            "子フローの実行（F-05-009_項目補正-途中点検結果登録）": {
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "fdb5c92f-ba16-f111-8341-000d3acf8a1a"
+                },
+                "body": {
+                  "text": "@string(outputs('途中点検結果テーブル登録用'))",
+                  "text_1": "@triggerBody()?['text_3']"
+                }
+              },
+              "runAfter": {
+                "途中点検結果テーブル登録用": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "JSON_の解析(親フローからの情報を解析)": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['text_6']",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "document_ImportRecordId": {
+                      "type": "string"
+                    },
+                    "document_item": {
+                      "type": "string"
+                    },
+                    "document_value": {
+                      "type": "string"
+                    },
+                    "document_selectionId": {
+                      "type": "string"
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "document_item_id": {
+                      "type": "string"
+                    },
+                    "document_id": {
+                      "type": "string"
+                    },
+                    "error_flag": {
+                      "type": "boolean"
+                    },
+                    "main_document_url": {
+                      "type": "string"
+                    },
+                    "sub_document_url": {
+                      "type": "string"
+                    },
+                    "error_type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "JSON_の解析(AIプロンプトの情報を解析)": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['text_4']",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ca_id": {
+                      "type": "string"
+                    },
+                    "ca_ai_promptid": {
+                      "type": "string"
+                    },
+                    "prompt1": {
+                      "type": "string"
+                    },
+                    "prompt2": {
+                      "type": "string"
+                    },
+                    "prompt3": {
+                      "type": "string"
+                    },
+                    "prompt4": {
+                      "type": "string"
+                    },
+                    "prompt5": {
+                      "type": "string"
+                    },
+                    "prompt6": {
+                      "type": "string"
+                    },
+                    "prompt7": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "JSON_の解析(親フローからの情報を解析)": [
+                  "SUCCEEDED"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "failedErrorMessageを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "住所カナ制限文字数を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "制限文字数",
+                "type": "integer"
+              }
+            ]
+          },
+          "runAfter": {
+            "フロー名の設定": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了を応答": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "回復結果": {
+                      "title": "回復結果",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorinfo": {
+                      "title": "errorInfo",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "回復結果": "[\n  {\n    \"document_item\": \"\",\n    \"check_result\": \"\",\n    \"document_recovery_value\": \"\",\n    \"recovery_reason\": \"\",\n    \"recovery_process\": \"\"\n  }\n]",
+                  "status": "Failed",
+                  "errorinfo": "@{outputs('エラー情報連携用')}"
+                }
+              },
+              "runAfter": {
+                "エラー情報連携用": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "エラー情報連携用": {
+              "type": "Compose",
+              "inputs": {
+                "flowId": "@{workflow().name}",
+                "flowName": "@{variables('フローの名前')}",
+                "errorTimestamp": "@{convertTimeZone(utcNow(), 'UTC', 'Tokyo Standard Time', 'yyyy-MM-dd HH:mm:ss')}",
+                "promptName": "",
+                "errorDetail": "@{string(result('Try'))}",
+                "failedAction": "@{variables('failedActionName')}",
+                "errorCode": "@{variables('failedErrorCode')}",
+                "errorMessage": "@{variables('failedErrorMessage')}"
+              },
+              "runAfter": {
+                "エラー箇所の解析": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "エラー箇所の解析": {
+              "type": "Foreach",
+              "foreach": "@result('Try')",
+              "actions": {
+                "条件": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('エラー箇所の解析')?['status']",
+                          "Failed"
+                        ]
+                      },
+                      {
+                        "equals": [
+                          "@items('エラー箇所の解析')?['status']",
+                          "Skipped"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "failedActionNameの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedActionName",
+                        "value": "@item()?['name']"
+                      }
+                    },
+                    "failedErrorCodeの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedErrorCode",
+                        "value": "@item()?['error']?['code']"
+                      },
+                      "runAfter": {
+                        "failedActionNameの設定": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "failedErrorMessageの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedErrorMessage",
+                        "value": "@item()?['error']?['message']"
+                      },
+                      "runAfter": {
+                        "failedErrorCodeの設定": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d8b86eee-6459-4b01-ba4a-1c74dea764a7"
+          }
+        },
+        "フロー名の設定": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "フローの名前",
+                "type": "string",
+                "value": "【エラー回復】F05-007_文字数超過チェック"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "failedActionNameを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedActionName",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "住所カナ制限文字数を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedErrorCodeを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedErrorCode",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "failedActionNameを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedErrorMessageを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "failedErrorCodeを初期化する": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

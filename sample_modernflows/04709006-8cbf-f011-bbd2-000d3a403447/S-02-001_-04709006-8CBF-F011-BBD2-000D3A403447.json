@@ -1,0 +1,397 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "businessType",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "checkStage",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "accountName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "入力を指定してください",
+                  "title": "エラーリスト管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "変数の初期化：varCounter": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varCounter",
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：selectColumns": [
+              "Succeeded"
+            ]
+          }
+        },
+        "変数の初期化：varResultArray": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varResultArray",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：varCounter": [
+              "Succeeded"
+            ]
+          }
+        },
+        "変数の初期化：filterRows": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "filterRows",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "変数の初期化：selectColumns": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "selectColumns",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：filterRows": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "スイッチ：チェックステージ": {
+              "type": "Switch",
+              "expression": "@triggerBody()?['text_1']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "Case 3": {
+                  "actions": {
+                    "Set_filterRows：2次チェック": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "filterRows",
+                        "value": "ca_error_type eq '@{triggerBody()?['text']}' and ca_2nd_check_owner eq '@{triggerBody()?['text_2']}' and ca_processing_status eq '二次チェック待ち'"
+                      },
+                      "runAfter": {
+                        "Set_selectColumns：2次チェック": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Set_selectColumns：2次チェック": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "selectColumns",
+                        "value": "ca_policy_number, ca_2nd_check_owner, ca_processing_status, ca_2nd_check_result, ca_import_date\n"
+                      }
+                    }
+                  },
+                  "case": "二次チェック"
+                },
+                "Case 4": {
+                  "actions": {
+                    "Set_filterRows：3次チェック": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "filterRows",
+                        "value": "ca_error_type eq '@{triggerBody()?['text']}' and ca_3rd_check_owner eq '@{triggerBody()?['text_2']}' and ca_processing_status eq '三次チェック待ち'"
+                      },
+                      "runAfter": {
+                        "Set_selectColumns：3次チェック": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Set_selectColumns：3次チェック": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "selectColumns",
+                        "value": "ca_policy_number, ca_3rd_check_owner, ca_processing_status, ca_3rd_check_result, ca_import_date\n"
+                      }
+                    }
+                  },
+                  "case": "三次チェック"
+                }
+              }
+            },
+            "For_each_3": {
+              "type": "Foreach",
+              "foreach": "@outputs('エラーリスト管理の取得')?['body/value']",
+              "actions": {
+                "条件：証券番号が存在するか": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@items('For_each_3')?['ca_policy_number']",
+                            ""
+                          ]
+                        }
+                      },
+                      {
+                        "not": {
+                          "equals": [
+                            "@items('For_each_3')?['ca_policy_number']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Compose": {
+                      "type": "Compose",
+                      "inputs": {
+                        "no": "@variables('varCounter')",
+                        "policy_number": "@items('For_each_3')?['ca_policy_number']",
+                        "second_check_result": "@items('For_each_3')?['ca_2nd_check_result']",
+                        "processing_status": "@items('For_each_3')?['ca_processing_status']",
+                        "import_date": "@items('For_each_3')?['ca_import_date']"
+                      }
+                    },
+                    "配列変数に追加：varResultArray": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varResultArray",
+                        "value": "@outputs('Compose')"
+                      },
+                      "runAfter": {
+                        "Compose": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "変数の値を増やす：varCounter": {
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "varCounter",
+                        "value": "@1"
+                      },
+                      "runAfter": {
+                        "配列変数に追加：varResultArray": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "エラーリスト管理の取得": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "正常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "list": {
+                      "title": "List",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "list": "@{variables('varResultArray')}",
+                  "status": "Success",
+                  "errorresult": "N/A"
+                }
+              },
+              "runAfter": {
+                "For_each_3": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "エラーリスト管理の取得": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_3']",
+                  "$select": "@variables('selectColumns')",
+                  "$filter": "@variables('filterRows')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "スイッチ：チェックステージ": [
+                  "SUCCEEDED"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "変数の初期化：varResultArray": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "list": {
+                      "title": "List",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "list": "N/A",
+                  "status": "Failed",
+                  "errorresult": "@{result('Try')}"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TIMEDOUT",
+              "SKIPPED",
+              "FAILED"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

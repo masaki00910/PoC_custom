@@ -1,0 +1,27 @@
+Workflow:
+  '@WorkflowId': '{db862b82-c3be-f011-bbd3-000d3a36c479}'
+  '@Name': F-02-001_書類取込
+  JsonFileName: /modernflows/db862b82-c3be-f011-bbd3-000d3a36c479/F-02-001_-DB862B82-C3BE-F011-BBD3-000D3A36C479.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.1.0.34
+  IsCustomizable: 1
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': F-02-001_書類取込

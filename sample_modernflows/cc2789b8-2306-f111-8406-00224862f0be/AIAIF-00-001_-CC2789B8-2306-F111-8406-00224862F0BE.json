@@ -1,0 +1,192 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_36393"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_c6193"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "94875565-1bc2-4df8-b12a-ab8f26738212"
+          }
+        }
+      },
+      "actions": {
+        "AI個別検証用テーブルデータでループ": {
+          "type": "Foreach",
+          "foreach": "@outputs('AI個別検証用テーブルの取得')?['body/value']",
+          "actions": {
+            "スイッチ": {
+              "type": "Switch",
+              "expression": "@items('AI個別検証用テーブルデータでループ')?['ca_test_perspective']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "AI読み取り検証のみ": {
+                  "actions": {
+                    "メイン書類の取得": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                          "path": "/Shared Documents/01_test/11_画像ファイル/90000000002/申込書_90000000002.pdf",
+                          "inferContentType": true
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "GetFileContentByPath",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "AIプロンプトテーブルデータ": {
+                      "type": "Foreach",
+                      "foreach": "@outputs('AIプロンプトテーブルの取得')?['body/value']",
+                      "actions": {
+                        "プロンプトを実行する（メイン書類読取り）": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "recordId": "4bc9d56d-9d5a-434d-83d2-6d6a44c8cd81",
+                              "item/requestv2/Prompt": "@item()?['ca_prompt2']",
+                              "item/requestv2/_30e1_30a4_30f3_66f8_985e/base64Encoded": "@base64(body('メイン書類の取得'))"
+                            },
+                            "host": {
+                              "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                              "operationId": "aibuilderpredict_customprompt",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          }
+                        },
+                        "AI出力結果の設定": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "AI出力結果",
+                            "value": "@outputs('プロンプトを実行する（メイン書類読取り）')?['body/responsev2/predictionOutput/text']"
+                          },
+                          "runAfter": {
+                            "プロンプトを実行する（メイン書類読取り）": [
+                              "Succeeded"
+                            ]
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "メイン書類の取得": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "case": "AI読み取り検証のみ"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "AIプロンプトテーブルの取得": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AI個別検証用テーブルの取得": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_ai_tests"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {
+            "AI出力結果を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AIプロンプトテーブルの取得": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_ai_prompts",
+              "$filter": "ca_id eq '契約者住所既契約突合チェック'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {
+            "AI個別検証用テーブルの取得": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AI出力結果を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AI出力結果",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {}
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

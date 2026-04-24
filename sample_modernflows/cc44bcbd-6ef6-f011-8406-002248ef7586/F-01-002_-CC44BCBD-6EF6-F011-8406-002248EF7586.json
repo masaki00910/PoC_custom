@@ -1,0 +1,418 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_155c9"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "ドキュメント (ca_shared_sharepointonline_e852265dbd1b4725a8ccf05ff09d4da3)": {
+          "defaultValue": "bc82a0c0-0fb5-41bf-955a-ee86cc35cd59",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_shared_sharepointonline_e852265dbd1b4725a8ccf05ff09d4da3"
+          }
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "証券番号",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "55dc8c74-4211-4000-9571-0873f3f9e7e4"
+          }
+        }
+      },
+      "actions": {
+        "申込書画像情報取得": {
+          "type": "Scope",
+          "actions": {
+            "ファイルが存在するか？": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('ファイルの取得_(プロパティのみ)')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Loop：Sharepointに格納されている画像ファイル": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('ファイルの取得_(プロパティのみ)')?['body/value']",
+                  "actions": {
+                    "申込書か？": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@items('Loop：Sharepointに格納されている画像ファイル')?['{Name}']",
+                              "申込書"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "配列変数に追加：varMainDocument": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "verMainDocument",
+                            "value": "@outputs('作成：MainDocumentJSON')"
+                          },
+                          "runAfter": {
+                            "作成：MainDocumentJSON": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "63597685-ddb8-4f26-9514-5417e4c86a67"
+                          }
+                        },
+                        "作成：MainDocumentJSON": {
+                          "type": "Compose",
+                          "inputs": {
+                            "name": "申込書",
+                            "path": "@{items('Loop：Sharepointに格納されている画像ファイル')?['{FullPath}']}",
+                            "url": "@{items('Loop：Sharepointに格納されている画像ファイル')?['{Link}']}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "2ebd12f7-396a-4da1-bb72-f8c5767c7c23"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      }
+                    },
+                    "意向確認書か？": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@items('Loop：Sharepointに格納されている画像ファイル')?['{Name}']",
+                              "意向確認書"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "作成：SubDocumentJSON": {
+                          "type": "Compose",
+                          "inputs": {
+                            "name": "意向確認書",
+                            "path": "@{items('Loop：Sharepointに格納されている画像ファイル')?['{FullPath}']}",
+                            "url": "",
+                            "order": 1
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d669ea01-8967-48e8-81ca-bfce4abb1eff"
+                          }
+                        },
+                        "配列変数に追加：varSubDocuments": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "verSubDocuments",
+                            "value": "@outputs('作成：SubDocumentJSON')"
+                          },
+                          "runAfter": {
+                            "作成：SubDocumentJSON": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "b63be2d7-f5d8-4830-b6b8-1ecf02eb19f7"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "申込書か？": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "法人確認書か？": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@items('Loop：Sharepointに格納されている画像ファイル')?['{Name}']",
+                              "法人確認書"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "作成：SubDocumentJSON_1": {
+                          "type": "Compose",
+                          "inputs": {
+                            "name": "法人確認書",
+                            "path": "@{items('Loop：Sharepointに格納されている画像ファイル')?['{FullPath}']}",
+                            "url": "",
+                            "order": 2
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d669ea01-8967-48e8-81ca-bfce4abb1eff"
+                          }
+                        },
+                        "配列変数に追加：varSubDocuments_1": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "verSubDocuments",
+                            "value": "@outputs('作成：SubDocumentJSON_1')"
+                          },
+                          "runAfter": {
+                            "作成：SubDocumentJSON_1": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "b63be2d7-f5d8-4830-b6b8-1ecf02eb19f7"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "意向確認書か？": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "口座振替依頼書か？": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@items('Loop：Sharepointに格納されている画像ファイル')?['{Name}']",
+                              "口座振替依頼書"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "作成：SubDocumentJSON_2": {
+                          "type": "Compose",
+                          "inputs": {
+                            "name": "口座振替依頼書",
+                            "path": "@{items('Loop：Sharepointに格納されている画像ファイル')?['{FullPath}']}",
+                            "url": "",
+                            "order": 3
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d669ea01-8967-48e8-81ca-bfce4abb1eff"
+                          }
+                        },
+                        "配列変数に追加：varSubDocuments_2": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "verSubDocuments",
+                            "value": "@outputs('作成：SubDocumentJSON_2')"
+                          },
+                          "runAfter": {
+                            "作成：SubDocumentJSON_2": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "b63be2d7-f5d8-4830-b6b8-1ecf02eb19f7"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "法人確認書か？": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 20
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "91cb5052-ae42-42de-ba72-1709d8173c92"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "ファイルの取得_(プロパティのみ)": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "ファイルの取得_(プロパティのみ)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                  "table": "@parameters('ドキュメント (ca_shared_sharepointonline_e852265dbd1b4725a8ccf05ff09d4da3)')",
+                  "folderPath": "@variables('verSharepointPATH')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GetFileItems",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "変数の初期化：verSubDocuments": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "643db220-b06b-4caf-a6ac-bd505e53ec05"
+          }
+        },
+        "変数の設定：varSharepointPATH": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "verSharepointPATH",
+                "type": "string",
+                "value": "/Shared Documents/01_test/11_画像ファイル/@{triggerBody()?['text']}"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "変数の初期化：verMainDocument": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "verMainDocument",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の設定：varSharepointPATH": [
+              "Succeeded"
+            ]
+          }
+        },
+        "変数の初期化：verSubDocuments": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "verSubDocuments",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：verMainDocument": [
+              "Succeeded"
+            ]
+          }
+        },
+        "フローに応答する": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "versharepointpath": {
+                  "title": "verSharepointPATH",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "vermaindocument": {
+                  "title": "verMainDocument",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "versubdocuments": {
+                  "title": "verSubDocuments",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "versharepointpath": "@{variables('verSharepointPATH')}",
+              "vermaindocument": "@{variables('verMainDocument')}",
+              "versubdocuments": "@{variables('verSubDocuments')}"
+            }
+          },
+          "runAfter": {
+            "申込書画像情報取得": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{f7a2f6df-14cd-6dbe-226b-4a8b6fb7fe7a}'
+  '@Name': 【開発用】既契約データ取り込みフロー
+  JsonFileName: /modernflows/f7a2f6df-14cd-6dbe-226b-4a8b6fb7fe7a/-F7A2F6DF-14CD-6DBE-226B-4A8B6FB7FE7A.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【開発用】既契約データ取り込みフロー

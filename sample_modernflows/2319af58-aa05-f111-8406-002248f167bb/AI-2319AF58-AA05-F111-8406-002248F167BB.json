@@ -1,0 +1,174 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_excelonlinebusiness": {
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_90ce9"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        }
+      },
+      "actions": {
+        "表内に存在する行を一覧表示": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+              "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+              "file": "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG",
+              "table": "{00000000-000C-0000-FFFF-FFFF00000000}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "operationId": "GetItems",
+              "connectionName": "shared_excelonlinebusiness"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "01S6JYSXL5UASSWO3AN5BZ6RQQWUFJFWA5": "/01_test/test/ATLAS既契約データ.xlsx",
+            "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}",
+            "01S6JYSXLXGIW7VMVC75B3N3YGJN3PSGES": "/01_test/test/ATLAS登録データ.xlsx",
+            "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG": "/01_test/test/AI個別検証用.xlsx"
+          }
+        },
+        "For_each": {
+          "type": "Foreach",
+          "foreach": "@outputs('表内に存在する行を一覧表示')?['body/value']",
+          "actions": {
+            "条件": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@length(outputs('行を一覧にする')?['body/value'])",
+                        0
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "行の更新": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "ca_ai_tests",
+                      "recordId": "@first(body('行を一覧にする')?['value'])?['ca_ai_testid']",
+                      "item/ca_policy_number": "@items('For_each')?['証券番号']",
+                      "item/ca_address_kana": "@items('For_each')?['カナ']",
+                      "item/ca_test_perspective": "@items('For_each')?['検証観点']",
+                      "item/ca_address_kanji": "@items('For_each')?['漢字']",
+                      "item/ca_main_document_path": "@items('For_each')?['申込書格納先']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "新しい行を追加する": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "ca_ai_tests",
+                        "item/ca_policy_number": "@items('For_each')?['証券番号']",
+                        "item/ca_address_kana": "@items('For_each')?['カナ']",
+                        "item/ca_test_perspective": "@items('For_each')?['検証観点']",
+                        "item/ca_address_kanji": "@items('For_each')?['漢字']",
+                        "item/ca_main_document_path": "@items('For_each')?['申込書格納先']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "行を一覧にする": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "行を一覧にする": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_ai_tests",
+                  "$filter": "ca_policy_number eq '@{items('For_each')?['証券番号']}'",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "表内に存在する行を一覧表示": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

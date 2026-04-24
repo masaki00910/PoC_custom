@@ -1,0 +1,118 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_c6193"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "94875565-1bc2-4df8-b12a-ab8f26738212"
+          }
+        }
+      },
+      "actions": {
+        "エラーリスト管理テーブルのステータスが「データ取り込み」": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_document_imports",
+              "$select": "ca_policy_number",
+              "$filter": "ca_processing_status eq 'データ取り込み'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {}
+        },
+        "エラーリスト管理テーブルデータでループ": {
+          "type": "Foreach",
+          "foreach": "@outputs('エラーリスト管理テーブルのステータスが「データ取り込み」')?['body/value']",
+          "actions": {
+            "対象の詳細データ管理テーブルデータ": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_document_items",
+                  "$filter": "ca_policy_number eq '@{item()?['ca_policy_number']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "詳細データ毎に処理を実施する": {
+              "type": "Foreach",
+              "foreach": "@outputs('対象の詳細データ管理テーブルデータ')?['body/value']",
+              "actions": {
+                "行の更新": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "ca_document_items",
+                      "recordId": "@items('詳細データ毎に処理を実施する')?['ca_document_itemid']",
+                      "item/ca_1st_check_result": false,
+                      "item/ca_1st_check_recovery_value": "''",
+                      "item/ca_1st_check_recovery_reason": "''"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "対象の詳細データ管理テーブルデータ": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "エラーリスト管理テーブルのステータスが「データ取り込み」": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

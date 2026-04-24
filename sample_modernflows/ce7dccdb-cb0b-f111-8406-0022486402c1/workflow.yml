@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{ce7dccdb-cb0b-f111-8406-0022486402c1}'
+  '@Name': BAK（再整理後の要件で改修前）【修正中】F-05-004_項目補正-漢字回復処理
+  JsonFileName: /modernflows/ce7dccdb-cb0b-f111-8406-0022486402c1/BAKF-05-004_--CE7DCCDB-CB0B-F111-8406-0022486402C1.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 0
+  StatusCode: 1
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': BAK（再整理後の要件で改修前）【修正中】F-05-004_項目補正-漢字回復処理

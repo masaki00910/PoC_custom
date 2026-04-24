@@ -1,0 +1,190 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_c6193"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "94875565-1bc2-4df8-b12a-ab8f26738212"
+          }
+        }
+      },
+      "actions": {
+        "AI個別検証用テーブルデータでループ": {
+          "type": "Foreach",
+          "foreach": "@outputs('AI個別検証用テーブルの取得')?['body/value']",
+          "actions": {
+            "スイッチ": {
+              "type": "Switch",
+              "expression": "@items('AI個別検証用テーブルデータでループ')?['ca_test_perspective']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "AI住所漢字カナ一致検証のみ": {
+                  "actions": {
+                    "AIプロンプトテーブルデータ2": {
+                      "type": "Foreach",
+                      "foreach": "@outputs('AIプロンプトテーブルの取得')?['body/value']",
+                      "actions": {
+                        "プロンプトを実行する（住所漢字とカナの整合チェック）": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "recordId": "327125d1-564c-4a6f-90ca-3393f14a047d",
+                              "item/requestv2/prompt": "@items('AIプロンプトテーブルデータ2')?['ca_prompt4']",
+                              "item/requestv2/_753b_50cf_60c5_5831": "@coalesce(items('AI個別検証用テーブルデータでループ')?['ca_address_kanji'],'データなし')",
+                              "item/requestv2/inputdata": "@coalesce(items('AI個別検証用テーブルデータでループ')?['ca_address_kana'],'データなし')"
+                            },
+                            "host": {
+                              "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                              "operationId": "aibuilderpredict_customprompt",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          }
+                        },
+                        "AI出力結果の設定2": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "AI出力結果",
+                            "value": "@outputs('プロンプトを実行する（住所漢字とカナの整合チェック）')?['body/responsev2/predictionOutput/structuredOutput/_6574_54815cb838fe57a9d952640d907f47d288']"
+                          },
+                          "runAfter": {
+                            "プロンプトを実行する（住所漢字とカナの整合チェック）": [
+                              "Succeeded"
+                            ]
+                          }
+                        },
+                        "AI出力結果の更新": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "ca_ai_tests",
+                              "recordId": "@items('AI個別検証用テーブルデータでループ')?['ca_ai_testid']",
+                              "item/ca_ai_result": "@variables('AI出力結果')"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "AI出力結果の設定2": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "23dd13fb-9775-4317-8c5f-efd5c4e9aeb8"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "case": "AI住所漢字カナ一致検証のみ"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "AIプロンプトテーブルの取得": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AI個別検証用テーブルの取得": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_ai_tests",
+              "$filter": "ca_policy_number eq '90000000016'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {
+            "AI出力結果を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AIプロンプトテーブルの取得": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_ai_prompts",
+              "$filter": "ca_id eq '契約者住所既契約突合チェック'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {
+            "AI個別検証用テーブルの取得": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AI出力結果を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AI出力結果",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {}
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

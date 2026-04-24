@@ -1,0 +1,415 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "select",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "ユーザーマスタ",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "エラーリスト管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "変数の初期化：varFilterRows": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFilterRows",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：varUserIndex": [
+              "Succeeded"
+            ]
+          }
+        },
+        "変数の初期化：varUsers": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varUsers",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "変数の初期化：varUserIndex": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varUserIndex",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：varUsers": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "Switch": {
+              "type": "Switch",
+              "expression": "@triggerBody()?['text']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "二次チェック": {
+                  "actions": {
+                    "Set_variable": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varFilterRows",
+                        "value": "ca_2nd_check_owner eq null and ca_processing_status eq '二次チェック待ち'"
+                      }
+                    }
+                  },
+                  "case": "2nd"
+                },
+                "三次チェック": {
+                  "actions": {
+                    "Set_variable_1": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varFilterRows",
+                        "value": "ca_3rd_check_owner eq null and ca_processing_status eq '三次チェック待ち'"
+                      }
+                    }
+                  },
+                  "case": "3rd"
+                }
+              }
+            },
+            "行を一覧にする：ユーザーマスタ": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_1']",
+                  "$select": "new_a_user_id, new_a_user_name, new_a_authority, ca_flag",
+                  "$filter": "ca_flag eq true"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Switch": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "行を一覧にする：エラーリスト管理": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_2']",
+                  "$select": "ca_policy_number, ca_2nd_check_owner, ca_3rd_check_owner",
+                  "$filter": "@variables('varFilterRows')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "行を一覧にする：ユーザーマスタ": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_varUsers": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varUsers",
+                "value": "@outputs('行を一覧にする：ユーザーマスタ')?['body/value']"
+              },
+              "runAfter": {
+                "行を一覧にする：エラーリスト管理": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "正常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Success",
+                  "errorresult": "N/A"
+                }
+              },
+              "runAfter": {
+                "エラーリスト管理のレコードが存在するか": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "エラーリスト管理のレコードが存在するか": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@length(outputs('行を一覧にする：エラーリスト管理')?['body/value'])",
+                        0
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Loop：エラーリスト管理": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('行を一覧にする：エラーリスト管理')?['body/value']",
+                  "actions": {
+                    "作成：割り当てユーザーを取得": {
+                      "type": "Compose",
+                      "inputs": "@variables('varUsers')[mod(variables('varUserIndex'), length(variables('varUsers')))]"
+                    },
+                    "Increment_variable": {
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "varUserIndex",
+                        "value": 1
+                      },
+                      "runAfter": {
+                        "Switch_1": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Switch_1": {
+                      "type": "Switch",
+                      "expression": "@triggerBody()?['text']",
+                      "default": {
+                        "actions": {}
+                      },
+                      "cases": {
+                        "二次チェック_1": {
+                          "actions": {
+                            "行の更新": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "@triggerBody()?['text_2']",
+                                  "recordId": "@items('Loop：エラーリスト管理')?['ca_document_importid']",
+                                  "item": "@outputs('エラーリストテーブル更新用（二次チェック）')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "runAfter": {
+                                "エラーリストテーブル更新用（二次チェック）": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "エラーリストテーブル更新用（二次チェック）": {
+                              "type": "Compose",
+                              "inputs": {
+                                "ca_2nd_check_owner": "@{outputs('作成：割り当てユーザーを取得')?['new_a_user_name']}"
+                              }
+                            }
+                          },
+                          "case": "2nd"
+                        },
+                        "三次チェック_1": {
+                          "actions": {
+                            "行の更新_1": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "@triggerBody()?['text_2']",
+                                  "recordId": "@items('Loop：エラーリスト管理')?['ca_document_importid']",
+                                  "item": "@outputs('エラーリストテーブル更新用（三次チェック）')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "runAfter": {
+                                "エラーリストテーブル更新用（三次チェック）": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "エラーリストテーブル更新用（三次チェック）": {
+                              "type": "Compose",
+                              "inputs": {
+                                "ca_3rd_check_owner": "@{outputs('作成：割り当てユーザーを取得')?['new_a_user_name']}"
+                              }
+                            }
+                          },
+                          "case": "3rd"
+                        }
+                      },
+                      "runAfter": {
+                        "作成：割り当てユーザーを取得": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Set_varUsers": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "変数の初期化：varFilterRows": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed",
+                  "errorresult": "@{result('Try')}"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

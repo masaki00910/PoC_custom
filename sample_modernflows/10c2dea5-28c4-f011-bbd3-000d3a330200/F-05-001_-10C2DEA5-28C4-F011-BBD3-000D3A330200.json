@@ -1,0 +1,341 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "行が追加、変更、または削除された場合": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "cre00_import_item",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "cre00_importstatus",
+              "subscriptionRequest/filterexpression": "cre00_importstatus eq 'OCR実行完了'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "actions": {
+            "インポート管理テーブル登録用(項目補正中)": {
+              "metadata": {
+                "operationMetadataId": "49f66107-e852-49cf-a0ee-1465cfe9200c"
+              },
+              "type": "Compose",
+              "inputs": {
+                "cre00_importstatus": "項目補正中"
+              }
+            },
+            "インポート管理テーブル行の更新(OCR実行中)": {
+              "runAfter": {
+                "インポート管理テーブル登録用(項目補正中)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "30e39d47-4f9d-49f2-9532-fe10e0adc5df"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('インポート管理テーブル')",
+                  "recordId": "@triggerOutputs()?['body/cre00_import_itemid']",
+                  "item": "@outputs('インポート管理テーブル登録用(項目補正中)')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "インポート管理テーブル登録用(完了)": {
+              "runAfter": {
+                "AIOCR読取結果毎に処理を実施する": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": {
+                "cre00_importstatus": "完了"
+              }
+            },
+            "インポート管理テーブル行の更新(完了)": {
+              "runAfter": {
+                "インポート管理テーブル登録用(完了)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('インポート管理テーブル')",
+                  "recordId": "@triggerOutputs()?['body/cre00_import_itemid']",
+                  "item": "@outputs('インポート管理テーブル登録用(完了)')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "行を一覧にする(AIOCR読取結果)": {
+              "runAfter": {
+                "インポート管理テーブル行の更新(OCR実行中)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_document_items",
+                  "$filter": "_ca_document_id_value eq @{triggerOutputs()?['body/cre00_documentid']}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "AIOCR読取結果毎に処理を実施する": {
+              "foreach": "@outputs('行を一覧にする(AIOCR読取結果)')?['body/value']",
+              "actions": {
+                "子フローの実行用(AIプロンプト実行用)": {
+                  "type": "Compose",
+                  "inputs": {
+                    "document_ImportRecordId": "@{triggerOutputs()?['body/cre00_documentid']}",
+                    "document_item": "@{item()?['ca_document_item']}",
+                    "document_value": "@{item()?['ca_document_value']}",
+                    "document_selectionId": "@{triggerOutputs()?['body/cre00_document_selectionid']}",
+                    "documentId": "@{triggerOutputs()?['body/cre00_documentid']}",
+                    "document_item_id": "@{items('AIOCR読取結果毎に処理を実施する')?['ca_document_itemid']}",
+                    "document_id": "@{triggerOutputs()?['body/cre00_document_item_id']}"
+                  }
+                },
+                "子フローの実行(AIプロンプト実行)": {
+                  "runAfter": {
+                    "子フローの実行用(AIプロンプト実行用)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "35b37bd8-f4c5-f011-bbd3-000d3a330200"
+                    },
+                    "body": {
+                      "text": "@string(outputs('子フローの実行用(AIプロンプト実行用)'))"
+                    },
+                    "retryPolicy": {
+                      "type": "none"
+                    }
+                  }
+                },
+                "子フローの成功可否(AIプロンプト実行)": {
+                  "actions": {},
+                  "runAfter": {
+                    "子フローの実行(AIプロンプト実行)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Throw": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "例外トリガー",
+                          "value": "@null"
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body('子フローの実行(AIプロンプト実行)')?['status']",
+                          "Success"
+                        ]
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {
+                "行を一覧にする(AIOCR読取結果)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "例外トリガーを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "インポート管理テーブルを初期化する": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "b8f2fda3-7af1-46be-b7fb-964e65b61592"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "インポート管理テーブル",
+                "type": "string",
+                "value": "cre00_import_items"
+              }
+            ]
+          }
+        },
+        "Catch": {
+          "actions": {
+            "ロールバック処理": {
+              "actions": {
+                "インポート管理テーブル登録用(項目補正エラー)": {
+                  "metadata": {
+                    "operationMetadataId": "7ac465f0-4b54-4433-9a16-925ba3f61a90"
+                  },
+                  "type": "Compose",
+                  "inputs": {
+                    "cre00_importstatus": "項目補正エラー"
+                  }
+                },
+                "インポート管理テーブル行の更新(項目補正エラー)": {
+                  "runAfter": {
+                    "インポート管理テーブル登録用(項目補正エラー)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a2043024-ecbf-4b66-a332-c46d23e1299f"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "@variables('インポート管理テーブル')",
+                      "recordId": "@triggerOutputs()?['body/cre00_import_item_id']",
+                      "item": "@outputs('インポート管理テーブル登録用(項目補正エラー)')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "type": "Scope"
+            },
+            "通知処理": {
+              "actions": {},
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "type": "Scope"
+            },
+            "異常終了": {
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "type": "Scope"
+        },
+        "AIOCR読取結果テーブルを初期化する": {
+          "runAfter": {
+            "インポート管理テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AIOCR読取結果テーブル",
+                "type": "string",
+                "value": "ca_document_items"
+              }
+            ]
+          }
+        },
+        "例外トリガーを初期化する": {
+          "runAfter": {
+            "AIOCR読取結果テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "例外トリガー",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

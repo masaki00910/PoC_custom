@@ -1,0 +1,312 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "証券番号",
+                  "title": "PolicyNumber",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "再回復リストJSON",
+                  "title": "operatorRecoveryList",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "詳細データ管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "a8078148-2d40-4716-8fd4-84757d282be0"
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "JSON_の解析：オペレーター回復結果": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['text_1']",
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "reason",
+                      "value"
+                    ]
+                  }
+                }
+              }
+            },
+            "nullを除外": {
+              "type": "Query",
+              "inputs": {
+                "from": "@body('JSON_の解析：オペレーター回復結果')",
+                "where": "@not(empty(item()?['value']))"
+              },
+              "runAfter": {
+                "JSON_の解析：オペレーター回復結果": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e544e6e5-1ba9-47a2-b7b6-f2179958adbb"
+              }
+            },
+            "行を一覧にする：詳細データ管理": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_2']",
+                  "fetchXml": "<fetch>\n  <entity name=\"ca_document_item\">\n    <attribute name=\"ca_policy_number\" />\n    <attribute name=\"ca_field_id\" />\n    <filter type=\"and\">\n      <condition attribute=\"ca_policy_number\" operator=\"eq\" value=\"@{triggerBody()?['text']}\" />\n    </filter>\n    <link-entity name=\"ca_error_list_item_master\" \n                 from=\"ca_error_list_item_masterid\" \n                 to=\"ca_field_id\" \n                 link-type=\"inner\" \n                 alias=\"em\">\n　　　<attribute name=\"ca_field_name\" />\n    </link-entity>\n  </entity>\n</fetch>"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "nullを除外": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "330ae769-4afa-4aba-b5a0-510fa2abb83a"
+              }
+            },
+            "Loop：詳細データ管理": {
+              "type": "Foreach",
+              "foreach": "@outputs('行を一覧にする：詳細データ管理')?['body/value']",
+              "actions": {
+                "Loop：再回復項目": {
+                  "type": "Foreach",
+                  "foreach": "@body('nullを除外')",
+                  "actions": {
+                    "詳細データ管理の項目名と再回復の項目名が一致するか": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@items('Loop：再回復項目')['id']",
+                              "@items('Loop：詳細データ管理')?['em.ca_field_name']"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "詳細データ管理の更新": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "@triggerBody()?['text_2']",
+                              "recordId": "@items('Loop：詳細データ管理')?['ca_document_itemid']",
+                              "item": "@outputs('詳細データ管理テーブル更新用')"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "詳細データ管理テーブル更新用": [
+                              "SUCCEEDED"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "14d40318-b4ee-4e60-b28f-1c9e40bcfc32"
+                          }
+                        },
+                        "詳細データ管理テーブル更新用": {
+                          "type": "Compose",
+                          "inputs": {
+                            "ca_2nd_check_recovery_value": "@{items('Loop：再回復項目')['value']}",
+                            "ca_2nd_check_recovery_reason": "@{items('Loop：再回復項目')['reason']}"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "metadata": {
+                        "operationMetadataId": "8c45e380-0da4-4649-9fb8-fa6d91870983"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f4143fa4-ca08-4bd5-9c3f-56c1933b746d"
+                  }
+                }
+              },
+              "runAfter": {
+                "行を一覧にする：詳細データ管理": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "75a5ab0d-0e7a-457f-b3c0-4914f8be39ad"
+              }
+            },
+            "正常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Success",
+                  "errorresult": "N/A"
+                }
+              },
+              "runAfter": {
+                "Loop：詳細データ管理": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c021ed9b-abb5-42aa-9ed5-ec81908617d9"
+              }
+            }
+          },
+          "runAfter": {}
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed",
+                  "errorresult": "@{result('Try')}"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "c021ed9b-abb5-42aa-9ed5-ec81908617d9"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TIMEDOUT",
+              "SKIPPED",
+              "FAILED"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

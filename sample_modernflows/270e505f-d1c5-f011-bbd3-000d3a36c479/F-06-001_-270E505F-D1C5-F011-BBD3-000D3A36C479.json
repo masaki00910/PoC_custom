@@ -1,0 +1,155 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "帳票点検画面 (ca_CanvasAppIDFormVerification)": {
+          "defaultValue": "33b70f70-39aa-4150-b97f-ad9710a13575",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_CanvasAppIDFormVerification"
+          }
+        }
+      },
+      "triggers": {
+        "行が追加、変更、または削除された場合": {
+          "metadata": {
+            "operationMetadataId": "fa3f06e5-48bd-46eb-a743-aa936d15c760"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "cre00_import_item",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "cre00_importstatus",
+              "subscriptionRequest/filterexpression": "cre00_importstatus eq '完了'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "actions": {
+            "書類取込テーブル登録用(完了)": {
+              "type": "Compose",
+              "inputs": {
+                "ca_reportstatus": 1,
+                "ca_appid": "@{parameters('帳票点検画面 (ca_CanvasAppIDFormVerification)')}"
+              }
+            },
+            "行の更新(書類取込テーブル)": {
+              "runAfter": {
+                "書類取込テーブル登録用(完了)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('書類取込テーブル')",
+                  "recordId": "@triggerOutputs()?['body/cre00_documentid']",
+                  "item": "@outputs('書類取込テーブル登録用(完了)')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "書類取込テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dedbab4c-63f5-4b6d-94ee-9b8fa469cb75"
+          },
+          "type": "Scope"
+        },
+        "Catch": {
+          "actions": {
+            "通知処理": {
+              "actions": {},
+              "metadata": {
+                "operationMetadataId": "a83cb950-ea7c-4619-85bd-2e2aec309030"
+              },
+              "type": "Scope"
+            },
+            "異常終了": {
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "921a6eac-b482-4575-9799-483039d1ce83"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Failed",
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "091ff7a0-1425-43c0-a477-370ad31561fd"
+          },
+          "type": "Scope"
+        },
+        "書類取込テーブルを初期化する": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "書類取込テーブル",
+                "type": "string",
+                "value": "ca_document_imports"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

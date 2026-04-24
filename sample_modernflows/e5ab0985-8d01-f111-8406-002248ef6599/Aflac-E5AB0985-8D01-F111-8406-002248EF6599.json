@@ -1,0 +1,126 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_excelonlinebusiness": {
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_e6d57"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "d3cac0a6-9c75-4ee1-a52d-6eb2477b685d"
+          }
+        }
+      },
+      "actions": {
+        "表内に存在する行を一覧表示": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+              "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+              "file": "01S6JYSXJYWANIF2QW6BEZFNDYCY5LZM7S",
+              "table": "{55D2CE73-4375-4C17-A828-B8AC5372DF63}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "operationId": "GetItems",
+              "connectionName": "shared_excelonlinebusiness"
+            }
+          },
+          "runAfter": {},
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 100000
+            }
+          },
+          "metadata": {
+            "01S6JYSXJZ3HJ3JHISHVGKWSFL2S7D7EA6": "/01_test/test/郵政住所マスタ.xlsx",
+            "tableId": "{55D2CE73-4375-4C17-A828-B8AC5372DF63}",
+            "01S6JYSXJYWANIF2QW6BEZFNDYCY5LZM7S": "/01_test/test/AF住所マスタ（サンプル）.xlsx"
+          }
+        },
+        "For_each": {
+          "type": "Foreach",
+          "foreach": "@outputs('表内に存在する行を一覧表示')?['body/value']",
+          "actions": {
+            "新しい行を追加する": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_aflac_address_masters",
+                  "item/ca_id": "@items('For_each')?['ID']",
+                  "item/ca_oaza_common_name": "@items('For_each')?['大字・通称名']",
+                  "item/ca_oaza_common_name_kana": "@items('For_each')?['大字・通称名カナ']",
+                  "item/ca_aza_cho_name_kana": "@items('For_each')?['字・丁カナ']",
+                  "item/ca_aza_cho_name": "@items('For_each')?['字・丁名']",
+                  "item/ca_municipality_name": "@items('For_each')?['市区郡町村名']",
+                  "item/ca_municipality_name_kana": "@items('For_each')?['市区郡町村名カナ']",
+                  "item/ca_prefecture_name": "@items('For_each')?['県名']",
+                  "item/ca_prefecture_name_kana": "@items('For_each')?['県名カナ']",
+                  "item/ca_postal_code": "@items('For_each')?['郵便番号']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "表内に存在する行を一覧表示": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,29 @@
+Workflow:
+  '@WorkflowId': '{3ffdd5de-1dcc-f011-8543-002248638de0}'
+  '@Name': S-04-002_詳細データの更新
+  JsonFileName: /modernflows/3ffdd5de-1dcc-f011-8543-002248638de0/S-04-002_-3FFDD5DE-1DCC-F011-8543-002248638DE0.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  RendererObjectTypeCode: 0
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 1
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': S-04-002_詳細データの更新

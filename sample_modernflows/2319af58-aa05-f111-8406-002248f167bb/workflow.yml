@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{2319af58-aa05-f111-8406-002248f167bb}'
+  '@Name': 【開発用】AI個別検証用データ取り込みフロー
+  JsonFileName: /modernflows/2319af58-aa05-f111-8406-002248f167bb/AI-2319AF58-AA05-F111-8406-002248F167BB.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.1.0.45
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【開発用】AI個別検証用データ取り込みフロー

@@ -1,0 +1,739 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "42208b91-12a9-4163-8cca-8029477c3b8f"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "payload情報を連携する",
+                  "title": "payload",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "actions": {
+            "正常終了を通知": {
+              "runAfter": {
+                "AIプロンプトあり？": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ef76aeb1-56cb-4910-b133-e73fc9f92469"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "status": "Success"
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "JSON_の解析(親フローからの情報を解析)": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "4a8c8cc4-7229-44bb-b6cc-683566273bbf"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@json(triggerBody()?['text'])",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "document_ImportRecordId": {
+                      "type": "string"
+                    },
+                    "document_selectionId": {
+                      "type": "string"
+                    },
+                    "document_value": {
+                      "type": "string"
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "document_item_id": {
+                      "type": "string"
+                    },
+                    "document_item": {
+                      "type": "string"
+                    },
+                    "document_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "行を一覧にする(AIプロンプト)": {
+              "runAfter": {
+                "行の更新(AIOCR読取結果)-InProgress": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9869962b-bc57-4904-8555-9ed518fe3d9d"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_ai_prompts",
+                  "$filter": "_ca_documentid_value eq @{body('JSON_の解析(親フローからの情報を解析)')?['document_selectionId']} and ca_condition eq '@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}' ",
+                  "$orderby": "ca_processing_order"
+                },
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                }
+              }
+            },
+            "AIプロンプト毎に処理を実施する": {
+              "foreach": "@outputs('行を一覧にする(AIプロンプト)')?['body/value']",
+              "actions": {
+                "ナレッジ機能の有効化": {
+                  "actions": {
+                    "ナレッジ機能(有効化)の設定": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "4c8ae976-82b4-4744-816c-37bd326923b8"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ナレッジ機能",
+                        "value": "@body('JSON_の解析(親フローからの情報を解析)')?['document_id']"
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "else": {
+                    "actions": {
+                      "ナレッジ機能(無効化)の設定": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "2c5111ec-d329-4776-986e-74678f19ce42"
+                        },
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ナレッジ機能",
+                          "value": "****knowledge無効***"
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('AIプロンプト毎に処理を実施する')?['ca_knowledge']",
+                          true
+                        ]
+                      }
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "722e52fe-67a7-42ee-81a8-bf0d11da66a1"
+                  },
+                  "type": "If"
+                },
+                "新しい行を追加する(AI点検結果)": {
+                  "runAfter": {
+                    "AI点検結果テーブル登録用": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "7403eb7a-8a46-4ab7-a79a-59f1f563fc88"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "@variables('AI点検結果テーブル')",
+                      "item": "@outputs('AI点検結果テーブル登録用')"
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                },
+                "プロンプトを実行する(M01_GenDocVison_AI_inspection)": {
+                  "runAfter": {
+                    "ナレッジ機能の有効化": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "04b8011e-de43-4842-a4d3-dcd09a3c0209"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "recordId": "376b9cf1-5ffa-4be5-91e0-6da0b3f32e38",
+                      "item/requestv2/_5e33_7968ID": "@variables('ナレッジ機能')",
+                      "item/requestv2/Inputdata": "@body('JSON_の解析(親フローからの情報を解析)')?['document_value']",
+                      "item/requestv2/Prompt": "@item()?['ca_prompt']"
+                    },
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "aibuilderpredict_customprompt",
+                      "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder"
+                    }
+                  }
+                },
+                "AI点検結果テーブル登録用": {
+                  "runAfter": {
+                    "プロンプトを実行する(M01_GenDocVison_AI_inspection)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "72af54cf-fdd1-4ffd-be22-7be61c55939e"
+                  },
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_ai_inspection_details": "@{outputs('プロンプトを実行する(M01_GenDocVison_AI_inspection)')?['body/responsev2/predictionOutput/text']}",
+                    "ca_document_item_id@odata.bind": "ca_document_items(@{body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']})",
+                    "ca_document_id@odata.bind": "ca_document_selections(@{body('JSON_の解析(親フローからの情報を解析)')?['document_selectionId']})",
+                    "ca_document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                    "ca_ID@odata.bind": "ca_document_imports(@{body('JSON_の解析(親フローからの情報を解析)')?['documentId']})"
+                  }
+                },
+                "登録IDに追加": {
+                  "runAfter": {
+                    "新しい行を追加する(AI点検結果)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "efbc4045-03cf-43ad-96f8-7ecf654b0a2d"
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "登録ID",
+                    "value": "@outputs('新しい行を追加する(AI点検結果)')?['body/ca_aiid']"
+                  }
+                },
+                "AI補正結果の設定": {
+                  "runAfter": {
+                    "登録IDに追加": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e83369e6-6b50-429c-8efc-d60669bd072d"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "AI補正結果",
+                    "value": "@outputs('プロンプトを実行する(M01_GenDocVison_AI_inspection)')?['body/responsev2/predictionOutput/text']"
+                  }
+                }
+              },
+              "runAfter": {
+                "行を一覧にする(AIプロンプト)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9f61966e-13e3-4e3c-855f-fcc89c6eb925"
+              },
+              "type": "Foreach"
+            },
+            "AIプロンプトあり？": {
+              "actions": {
+                "AIOCR読取結果テーブル登録用(Completed_項目補正)": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "e7bf00d5-d355-435a-92cc-bf47c9f3b182"
+                  },
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_document_value": "@{variables('AI補正結果')}",
+                    "ca_ai_inspection_status": 2
+                  }
+                },
+                "行の更新(AIOCR読取結果)-Completed_項目補正": {
+                  "runAfter": {
+                    "AIOCR読取結果テーブル登録用(Completed_項目補正)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "23dd13fb-9775-4317-8c5f-efd5c4e9aeb8"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "@variables('AIOCR読取結果テーブル')",
+                      "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                      "item": "@outputs('AIOCR読取結果テーブル登録用(Completed_項目補正)')"
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "AIプロンプト毎に処理を実施する": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "AIOCR読取結果テーブル登録用(Completed)": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "aa68350a-b8ab-4b51-9e86-303e6a4a8140"
+                    },
+                    "type": "Compose",
+                    "inputs": {
+                      "ca_ai_inspection_status": 2
+                    }
+                  },
+                  "行の更新(AIOCR読取結果)-Completed": {
+                    "runAfter": {
+                      "AIOCR読取結果テーブル登録用(Completed)": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "fea14cd4-fe3e-4947-9d19-96072664b2b4"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "@variables('AIOCR読取結果テーブル')",
+                        "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                        "item": "@outputs('AIOCR読取結果テーブル登録用(Completed)')"
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('行を一覧にする(AIプロンプト)')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5d8adb79-1742-4018-bf48-99b5e113b358"
+              },
+              "type": "If"
+            },
+            "AIOCR読取結果テーブル登録用(InProgress)": {
+              "runAfter": {
+                "JSON_の解析(親フローからの情報を解析)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c6902bcf-1104-4191-aea7-93f63c6d63b8"
+              },
+              "type": "Compose",
+              "inputs": {
+                "ca_ai_inspection_status": 1
+              }
+            },
+            "行の更新(AIOCR読取結果)-InProgress": {
+              "runAfter": {
+                "AIOCR読取結果テーブル登録用(InProgress)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "da1b7235-da06-48ae-8dc2-3b726ec42bb3"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "@variables('AIOCR読取結果テーブル')",
+                  "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                  "item": "@outputs('AIOCR読取結果テーブル登録用(InProgress)')"
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "AI補正結果を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "61cfa150-4e11-4681-8759-00374113d38e"
+          },
+          "type": "Scope"
+        },
+        "Catch": {
+          "actions": {
+            "異常終了を通知": {
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d4fd4b65-88e8-43ad-a717-65519f969eb5"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed"
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "ロールバック処理": {
+              "actions": {
+                "AI点検結果を削除": {
+                  "foreach": "@variables('登録ID')",
+                  "actions": {
+                    "行を削除する(AI点検で登録行を削除)": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "d5c393f6-3c13-4471-a91f-24c11998374a"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "@variables('AI点検結果テーブル')",
+                          "recordId": "@items('AI点検結果を削除')"
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "d49a22c9-9453-4bc8-91c3-b17b663a0720"
+                  },
+                  "type": "Foreach"
+                },
+                "行の更新(AIOCR読取結果)-Failed": {
+                  "runAfter": {
+                    "AIOCR読取結果テーブル登録用(Failed)": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Skipped",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "13908030-0be8-4935-a9b9-b03f8bf67a00"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "@variables('AIOCR読取結果テーブル')",
+                      "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                      "item": "@outputs('AIOCR読取結果テーブル登録用(Failed)')"
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                },
+                "AIOCR読取結果テーブル登録用(Failed)": {
+                  "runAfter": {
+                    "AI点検結果を削除": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Skipped",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "984d7f81-5091-4fce-8cc6-48c0b274abac"
+                  },
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_ai_inspection_status": 3
+                  }
+                }
+              },
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "9fe62fa1-b234-4e87-97f5-09b50a85f34d"
+              },
+              "type": "Scope"
+            },
+            "通知処理": {
+              "actions": {},
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "20dde546-80ff-40fe-be7c-4d3e693ce5ba"
+              },
+              "type": "Scope"
+            },
+            "終了": {
+              "runAfter": {
+                "異常終了を通知": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d1215ca6-2a1d-4982-8c97-c9c8b0efbbcd"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d8b86eee-6459-4b01-ba4a-1c74dea764a7"
+          },
+          "type": "Scope"
+        },
+        "AIOCR読取結果テーブルを初期化する": {
+          "runAfter": {
+            "AI点検結果テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ba0b2e57-529f-4b19-abe8-3eb383e480ef"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AIOCR読取結果テーブル",
+                "type": "string",
+                "value": "ca_document_items"
+              }
+            ]
+          }
+        },
+        "ナレッジ機能を初期化する": {
+          "runAfter": {
+            "AIプロンプトテーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b9b4b675-91a5-4794-8d05-726f243ab26d"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ナレッジ機能",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "登録IDを初期化する": {
+          "runAfter": {
+            "ナレッジ機能を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3b831006-0c18-4e8b-a2bf-eb411594d31a"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "登録ID",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "AI点検結果テーブルを初期化する": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "d5259e2f-029c-49cd-8d4b-6a51747f7638"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AI点検結果テーブル",
+                "type": "string",
+                "value": "ca_ais"
+              }
+            ]
+          }
+        },
+        "AIプロンプトテーブルを初期化する": {
+          "runAfter": {
+            "AIOCR読取結果テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a2b5ed02-37d8-4c09-abec-4045b4b4fb3b"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AIプロンプトテーブル",
+                "type": "string",
+                "value": "ca_ai_prompts"
+              }
+            ]
+          }
+        },
+        "AI補正結果を初期化する": {
+          "runAfter": {
+            "登録IDを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "389960f0-9296-493f-a2e8-990a115919c8"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AI補正結果",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,190 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_excelonlinebusiness": {
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_e6d57"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        }
+      },
+      "actions": {
+        "表内に存在する行を一覧表示": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+              "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+              "file": "01S6JYSXL5UASSWO3AN5BZ6RQQWUFJFWA5",
+              "table": "{049928EF-8CF6-4836-B999-C832D5F64BFA}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "operationId": "GetItems",
+              "connectionName": "shared_excelonlinebusiness"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "01S6JYSXL5UASSWO3AN5BZ6RQQWUFJFWA5": "/01_test/test/ATLAS既契約データ.xlsx",
+            "tableId": "{049928EF-8CF6-4836-B999-C832D5F64BFA}"
+          }
+        },
+        "For_each_2": {
+          "type": "Foreach",
+          "foreach": "@outputs('表内に存在する行を一覧表示')?['body/value']",
+          "actions": {
+            "行を一覧にする": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_existing_contract_datas",
+                  "$filter": "ca_policy_number eq '@{items('For_each_2')?['証券番号']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "条件_1": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@length(outputs('行を一覧にする')?['body/value'])",
+                        0
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "行の更新": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "ca_existing_contract_datas",
+                      "recordId": "@first(body('行を一覧にする')?['value'])?['ca_existing_contract_dataid']",
+                      "item/ca_sts": "@items('For_each_2')?['STS']",
+                      "item/ca_effective_date": "@if(\r\n  empty(items('For_each_2')?['契約日']),\r\n  null,\r\n  formatDateTime(\r\n    addDays('1899-12-30', int(items('For_each_2')?['契約日'])),\r\n    'yyyy-MM-dd'\r\n  )\r\n)\r\n",
+                      "item/ca_policyholder_address_kana": "@items('For_each_2')?['契約者_住所フリガナ']",
+                      "item/ca_policyholder_address_kanji": "@items('For_each_2')?['契約者_住所漢字']",
+                      "item/ca_policyholder_birthday": "@if(\r\n  empty(items('For_each_2')?['契約者_生年月日']),\r\n  null,\r\n  formatDateTime(\r\n    addDays('1899-12-30', int(items('For_each_2')?['契約者_生年月日'])),\r\n    'yyyy-MM-dd'\r\n  )\r\n)\r\n",
+                      "item/ca_policyholder_postal_code": "@items('For_each_2')?['契約者_郵便番号']",
+                      "item/ca_policyholder_name_kana": "@items('For_each_2')?['契約者氏名フリガナ']",
+                      "item/ca_policyholder_name_kanji": "@items('For_each_2')?['契約者氏名漢字']",
+                      "item/ca_insured_address_kana": "@items('For_each_2')?['被保険者_住所フリガナ']",
+                      "item/ca_insured_address_kanji": "@items('For_each_2')?['被保険者_住所漢字']",
+                      "item/ca_insured_birthday": "@if(\r\n  empty(items('For_each_2')?['被保険者_生年月日']),\r\n  null,\r\n  formatDateTime(\r\n    addDays('1899-12-30', int(items('For_each_2')?['被保険者_生年月日'])),\r\n    'yyyy-MM-dd'\r\n  )\r\n)\r\n",
+                      "item/ca_insured_postal_code": "@items('For_each_2')?['被保険者_郵便番号']",
+                      "item/ca_insured_name_kana": "@items('For_each_2')?['被保険者氏名フリガナ']",
+                      "item/ca_insured_name_kanji": "@items('For_each_2')?['被保険者氏名漢字']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "新しい行を追加する": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "ca_existing_contract_datas",
+                        "item/ca_policy_number": "@items('For_each_2')?['証券番号']",
+                        "item/ca_sts": "@items('For_each_2')?['STS']",
+                        "item/ca_effective_date": "@if(\r\n  empty(items('For_each_2')?['契約日']),\r\n  null,\r\n  formatDateTime(\r\n    addDays('1899-12-30', int(items('For_each_2')?['契約日'])),\r\n    'yyyy-MM-dd'\r\n  )\r\n)\r\n",
+                        "item/ca_policyholder_address_kana": "@items('For_each_2')?['契約者_住所フリガナ']",
+                        "item/ca_policyholder_address_kanji": "@items('For_each_2')?['契約者_住所漢字']",
+                        "item/ca_policyholder_birthday": "@if(\r\n  empty(items('For_each_2')?['契約者_生年月日']),\r\n  null,\r\n  formatDateTime(\r\n    addDays('1899-12-30', int(items('For_each_2')?['契約者_生年月日'])),\r\n    'yyyy-MM-dd'\r\n  )\r\n)\r\n",
+                        "item/ca_policyholder_postal_code": "@items('For_each_2')?['契約者_郵便番号']",
+                        "item/ca_policyholder_name_kana": "@items('For_each_2')?['契約者氏名フリガナ']",
+                        "item/ca_policyholder_name_kanji": "@items('For_each_2')?['契約者氏名漢字']",
+                        "item/ca_insured_address_kana": "@items('For_each_2')?['被保険者_住所フリガナ']",
+                        "item/ca_insured_address_kanji": "@items('For_each_2')?['被保険者_住所漢字']",
+                        "item/ca_insured_birthday": "@if(\r\n  empty(items('For_each_2')?['被保険者_生年月日']),\r\n  null,\r\n  formatDateTime(\r\n    addDays('1899-12-30', int(items('For_each_2')?['被保険者_生年月日'])),\r\n    'yyyy-MM-dd'\r\n  )\r\n)\r\n",
+                        "item/ca_insured_postal_code": "@items('For_each_2')?['被保険者_郵便番号']",
+                        "item/ca_insured_name_kana": "@items('For_each_2')?['被保険者氏名フリガナ']",
+                        "item/ca_insured_name_kanji": "@items('For_each_2')?['被保険者氏名漢字']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "行を一覧にする": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "表内に存在する行を一覧表示": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

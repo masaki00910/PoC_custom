@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>エラー回復システム</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Helvetica, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; background: #f3f4f6; color: #1f2937; min-height: 100vh; }
+  :root {
+    --navy-900: #1f2937; --navy-800: #374151; --navy-700: #4b5563; --navy-600: #6b7280;
+    --navy-500: #9ca3af; --navy-400: #d1d5db; --navy-100: #f3f4f6; --navy-50: #f9fafb;
+    --accent: #2563eb; --accent-lt: #eff6ff;
+    --green: #16a34a; --green-lt: #dcfce7;
+    --red: #dc2626; --red-lt: #fee2e2;
+    --yellow: #d97706; --yellow-lt: #fef3c7;
+    --gray: #6b7280; --gray-lt: #f3f4f6;
+    --border: #e5e7eb;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Tweaks */
+  #tweaks-panel { position:fixed; bottom:20px; right:20px; z-index:9999; background:#fff; color:var(--navy-900); border-radius:12px; border:1px solid var(--border); padding:16px 20px; width:220px; box-shadow:var(--shadow-md); display:none; font-size:13px; }
+  #tweaks-panel.visible { display:block; }
+  #tweaks-panel label { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; color:var(--gray); font-size:12px; }
+  #tweaks-panel input[type=range] { width:100%; accent-color:var(--accent); }
+  #tweaks-panel select { width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); background:var(--gray-lt); color:var(--navy-900); font-size:12px; }
+  #tweaks-panel .tweak-title { font-weight:600; font-size:13px; color:var(--navy-900); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="tweaks-panel">
+  <div class="tweak-title">Tweaks</div>
+  <label>テーブル行の高さ<input type="range" id="tw-row-height" min="36" max="64" step="4" value="44"></label>
+  <label>フォントサイズ<input type="range" id="tw-font-size" min="11" max="16" step="1" value="13"></label>
+  <label>チャット分割比
+    <select id="tw-chat-split">
+      <option value="38">左38% / 右62%</option>
+      <option value="42" selected>左42% / 右58%</option>
+      <option value="50">左50% / 右50%</option>
+    </select>
+  </label>
+</div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── Data & helpers ──────────────────────────────────────────
+const STATUSES = ['未処理','処理中','完了','エラー','保留'];
+const STATUS_STYLE = {
+  '未処理': { bg:'var(--gray-lt)',   color:'var(--gray)',   dot:'#9ca3af' },
+  '処理中': { bg:'var(--accent-lt)', color:'var(--accent)', dot:'#2563eb' },
+  '完了':   { bg:'var(--green-lt)',  color:'var(--green)',  dot:'#16a34a' },
+  'エラー': { bg:'var(--red-lt)',    color:'var(--red)',    dot:'#dc2626' },
+  '保留':   { bg:'var(--yellow-lt)', color:'var(--yellow)', dot:'#d97706' },
+};
+const rnd = arr => arr[Math.floor(Math.random()*arr.length)];
+const pad = (n,l=2) => String(n).padStart(l,'0');
+const fmtDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+
+const SAMPLE_USERS = [
+  { id:'admin', name:'システム管理者', role:'admin', dept:'管理部', lastLogin:'2026/04/22 09:01' },
+  { id:'tanaka', name:'田中 花子', role:'user', dept:'第一営業部', lastLogin:'2026/04/22 08:45' },
+  { id:'sato', name:'佐藤 一郎', role:'user', dept:'第二営業部', lastLogin:'2026/04/21 17:30' },
+  { id:'yamada', name:'山田 太郎', role:'user', dept:'審査部', lastLogin:'2026/04/21 16:12' },
+  { id:'suzuki', name:'鈴木 美咲', role:'admin', dept:'管理部', lastLogin:'2026/04/20 11:00' },
+  { id:'ito', name:'伊藤 健二', role:'user', dept:'第一営業部', lastLogin:'2026/04/19 14:22' },
+];
+
+const USER_IDS = ['tanaka','sato','yamada','suzuki','ito'];
+const sampleData = Array.from({length:28},(_,i)=>{
+  const d = new Date(2025, Math.floor(Math.random()*12), Math.floor(Math.random()*28)+1);
+  return {
+    no: i+1,
+    secNo: `SK-${String(2024000+(i+1)*17+Math.floor(Math.random()*100)).substring(0,10)}`,
+    status: rnd(STATUSES),
+    importDate: fmtDate(d),
+    assignee: rnd(USER_IDS),
+  };
+});
+
+const AI_RESPONSES = [
+  s=>`申込書「${s}」を確認しました。被保険者氏名の記載に問題はありません。`,
+  s=>`証券番号「${s}」の申込日を確認中です。記載内容は正常です。`,
+  ()=>`保険金額の記載を確認しました。補正の必要はありません。`,
+  ()=>`住所欄に番地の記載が不完全な可能性があります。ご確認をお願いします。`,
+  ()=>`署名欄に記入漏れが検出されました。申込人署名の確認が必要です。`,
+  ()=>`記載内容を全項目チェックしました。問題は検出されませんでした。`,
+];
+
+// ── Sub-components ──────────────────────────────────────────
+const StatusBadge = ({ status }) => {
+  const s = STATUS_STYLE[status]||STATUS_STYLE['未処理'];
+  return (
+    <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 10px',borderRadius:20,background:s.bg,color:s.color,fontSize:12,fontWeight:600}}>
+      <span style={{width:6,height:6,borderRadius:'50%',background:s.dot,display:'inline-block'}}/>
+      {status}
+    </span>
+  );
+};
+
+// 既契約情報（エラー回復の根拠となった過去契約データ）
+const ContractPlaceholder = ({ scale, offset, secNo }) => {
+  const prevSecNo = 'P' + secNo.replace(/^./, '');
+  return (
+  <svg viewBox="0 0 595 842" xmlns="http://www.w3.org/2000/svg"
+    style={{width:595*scale,height:842*scale,transform:`translate(${offset.x}px,${offset.y}px)`,transformOrigin:'top left',display:'block',flexShrink:0}}>
+    <rect width="595" height="842" fill="#fff"/>
+    {/* Header band */}
+    <rect x="0" y="0" width="595" height="58" fill="#1e3a5f"/>
+    <text x="30" y="28" fontFamily="sans-serif" fontSize="13" fill="#fff" fontWeight="bold">既契約照会システム　- 契約情報詳細</text>
+    <text x="30" y="46" fontFamily="sans-serif" fontSize="10" fill="#a8c5e8">Legacy Contract Reference</text>
+    <rect x="460" y="16" width="110" height="26" rx="4" fill="#2563eb"/>
+    <text x="515" y="33" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#fff">照会結果: ヒット</text>
+
+    {/* Match info banner */}
+    <rect x="20" y="78" width="555" height="46" rx="6" fill="#dbeafe" stroke="#2563eb" strokeWidth="1"/>
+    <text x="34" y="98" fontFamily="sans-serif" fontSize="10" fill="#1e40af" fontWeight="bold">● マッチング根拠</text>
+    <text x="34" y="115" fontFamily="sans-serif" fontSize="10" fill="#1e3a5f">契約者名（カナ）一致: ﾏﾂﾓﾄﾅｵｷ　／　生年月日一致: S58.04.12　／　既契約証券番号: {prevSecNo}</text>
+
+    {/* Section: 契約者情報 */}
+    <rect x="20" y="144" width="555" height="22" fill="#1e3a5f"/>
+    <text x="30" y="160" fontFamily="sans-serif" fontSize="11" fill="#fff" fontWeight="bold">■ 契約者情報（既契約）</text>
+
+    {[
+      ['契約者名（漢字）','松本　直樹',false],
+      ['契約者名（カナ）','ﾏﾂﾓﾄﾅｵｷ',true],
+      ['生年月日','昭和58年04月12日',false],
+      ['契約者住所（〒）','060-0001',true],
+      ['契約者住所（漢字）','北海道札幌市中央区北1条西11-11-11',false],
+      ['契約者住所（カナ）','ﾎｯｶｲﾄﾞｳｻｯﾎﾟﾛｼﾁｭｳｵｳｸｷﾀ1ｼﾞｮｳﾆｼ11-11-11',true],
+      ['電話番号','011-221-xxxx',false],
+    ].map(([label,val,hl],i)=>(
+      <g key={i}>
+        <rect x="20" y={172+i*26} width="555" height="26" fill={i%2===0?'#f8fafc':'#fff'} stroke="#e2e8f0" strokeWidth="0.5"/>
+        {hl && <rect x="20" y={172+i*26} width="555" height="26" fill="#fef3c7" opacity="0.7"/>}
+        <text x="32" y={189+i*26} fontFamily="sans-serif" fontSize="10" fill="#64748b" fontWeight="bold">{label}</text>
+        <text x="220" y={189+i*26} fontFamily="monospace" fontSize="10" fill="#0f172a">{val}</text>
+        {hl && <text x="550" y={189+i*26} textAnchor="end" fontFamily="sans-serif" fontSize="8" fill="#b45309" fontWeight="bold">● 回復参照</text>}
+      </g>
+    ))}
+
+    {/* Section: 既契約サマリ */}
+    <rect x="20" y="366" width="555" height="22" fill="#1e3a5f"/>
+    <text x="30" y="382" fontFamily="sans-serif" fontSize="11" fill="#fff" fontWeight="bold">■ 既契約サマリ</text>
+    {[
+      ['既契約証券番号',prevSecNo],
+      ['契約日','2018年07月01日'],
+      ['保険種類','終身保険（低解約返戻金型）'],
+      ['保険金額','3,000万円'],
+      ['保険料','¥18,240 / 月'],
+      ['契約状態','有効'],
+      ['最終変更日','2023年04月15日（住所変更）'],
+    ].map(([label,val],i)=>(
+      <g key={i}>
+        <rect x="20" y={394+i*24} width="555" height="24" fill={i%2===0?'#f8fafc':'#fff'} stroke="#e2e8f0" strokeWidth="0.5"/>
+        <text x="32" y={410+i*24} fontFamily="sans-serif" fontSize="10" fill="#64748b" fontWeight="bold">{label}</text>
+        <text x="220" y={410+i*24} fontFamily="monospace" fontSize="10" fill="#0f172a">{val}</text>
+      </g>
+    ))}
+
+    {/* Section: 変更履歴 */}
+    <rect x="20" y="576" width="555" height="22" fill="#1e3a5f"/>
+    <text x="30" y="592" fontFamily="sans-serif" fontSize="11" fill="#fff" fontWeight="bold">■ 住所変更履歴</text>
+    <rect x="20" y="604" width="555" height="24" fill="#f1f5f9"/>
+    <text x="32" y="620" fontFamily="sans-serif" fontSize="9" fill="#475569" fontWeight="bold">変更日</text>
+    <text x="130" y="620" fontFamily="sans-serif" fontSize="9" fill="#475569" fontWeight="bold">変更前住所</text>
+    <text x="330" y="620" fontFamily="sans-serif" fontSize="9" fill="#475569" fontWeight="bold">変更後住所（現在）</text>
+    {[
+      ['2023/04/15','東京都新宿区西新宿2-8-1','北海道札幌市中央区北1条西11-11-11'],
+      ['2018/07/01','（新規契約）','東京都新宿区西新宿2-8-1'],
+    ].map(([d,b,a],i)=>(
+      <g key={i}>
+        <rect x="20" y={628+i*26} width="555" height="26" fill={i===0?'#fefce8':'#fff'} stroke="#e2e8f0" strokeWidth="0.5"/>
+        <text x="32" y={644+i*26} fontFamily="monospace" fontSize="9" fill="#0f172a">{d}</text>
+        <text x="130" y={644+i*26} fontFamily="sans-serif" fontSize="9" fill="#64748b">{b}</text>
+        <text x="330" y={644+i*26} fontFamily="sans-serif" fontSize="9" fill="#0f172a" fontWeight={i===0?'bold':'normal'}>{a}</text>
+      </g>
+    ))}
+
+    {/* Footer */}
+    <rect x="20" y="700" width="555" height="60" rx="6" fill="#f0fdf4" stroke="#16a34a" strokeWidth="1"/>
+    <text x="34" y="720" fontFamily="sans-serif" fontSize="10" fill="#15803d" fontWeight="bold">✓ データ信頼度</text>
+    <text x="34" y="738" fontFamily="sans-serif" fontSize="9" fill="#166534">最終更新: 2023/04/15　／　名寄せ一致度: 98.7%　／　同一契約者と判定</text>
+    <text x="34" y="752" fontFamily="sans-serif" fontSize="9" fill="#166534">本データを一次チェックの回復根拠として自動適用しました。</text>
+
+    <text x="297" y="800" textAnchor="middle" fontFamily="sans-serif" fontSize="8" fill="#94a3b8">既契約照会システム  |  参照日時: 2025/10/16 09:12:34  |  照会ID: Q{secNo.slice(-4)}-8847</text>
+  </svg>
+  );
+};
+
+const ScanPlaceholder = ({ scale, offset, secNo }) => (
+  <svg viewBox="0 0 595 842" xmlns="http://www.w3.org/2000/svg"
+    style={{width:595*scale,height:842*scale,transform:`translate(${offset.x}px,${offset.y}px)`,transformOrigin:'top left',display:'block',flexShrink:0}}>
+    <rect width="595" height="842" fill="#f9f8f6"/>
+    {Array.from({length:52},(_,i)=><line key={i} x1="40" y1={60+i*14} x2="555" y2={60+i*14} stroke="#e2e0db" strokeWidth="0.8"/>)}
+    <rect x="40" y="30" width="515" height="2" fill="#374151"/>
+    <rect x="40" y="34" width="515" height="1" fill="#c0c8d8"/>
+    <text x="297" y="24" textAnchor="middle" fontFamily="serif" fontSize="14" fill="#374151" fontWeight="bold">生命保険申込書　控</text>
+    <rect x="480" y="40" width="60" height="60" rx="4" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeDasharray="4,2"/>
+    <text x="510" y="66" textAnchor="middle" fontFamily="serif" fontSize="9" fill="#dc2626">受付</text>
+    <text x="510" y="80" textAnchor="middle" fontFamily="serif" fontSize="9" fill="#dc2626">印</text>
+    {[
+      [60,78,180,'証券番号',secNo],[60,106,180,'申込日','2025年10月15日'],[60,134,180,'保険種類','定期保険'],
+      [60,162,280,'被保険者氏名','山田　太郎'],[60,190,200,'生年月日','昭和58年4月12日'],[60,218,80,'性別','男'],
+      [60,246,280,'住所','東京都新宿区西新宿1-1-1'],[60,290,120,'保険金額','2,000万円'],
+      [60,318,120,'保険期間','20年'],[60,346,120,'保険料','¥12,500/月'],
+    ].map(([x,y,w,label,val])=>(
+      <g key={y}>
+        <text x={x} y={y-2} fontSize="8" fill="#6b7280" fontFamily="sans-serif">{label}</text>
+        <rect x={x} y={y} width={w} height={16} fill="#fff" stroke="#c0c8d8" strokeWidth="0.8"/>
+        <text x={x+6} y={y+11} fontSize="10" fill="#1f2937" fontFamily="sans-serif">{val}</text>
+      </g>
+    ))}
+    <rect x="40" y="720" width="240" height="60" fill="none" stroke="#c0c8d8" strokeWidth="0.8"/>
+    <text x="160" y="744" textAnchor="middle" fontSize="9" fill="#9ca3af" fontFamily="sans-serif">申込人署名</text>
+    <rect x="320" y="720" width="235" height="60" fill="none" stroke="#c0c8d8" strokeWidth="0.8"/>
+    <text x="437" y="744" textAnchor="middle" fontSize="9" fill="#9ca3af" fontFamily="sans-serif">代理店印</text>
+    <rect x="40" y="810" width="515" height="2" fill="#374151"/>
+  </svg>
+);
+
+// ── LoginPage ───────────────────────────────────────────────
+const LoginPage = ({ onLogin }) => {
+  const [id, setId] = useState('');
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const handleSubmit = e => {
+    e.preventDefault();
+    if(!id||!pw){setErr('IDとパスワードを入力してください。');return;}
+    setLoading(true); setErr('');
+    setTimeout(()=>{ setLoading(false); onLogin(id); }, 700);
+  };
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#e5e7eb 0%,#f3f4f6 50%,#fff 100%)'}}>
+      <div style={{width:380,background:'#fff',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,.12)',overflow:'hidden'}}>
+        <div style={{background:'#fff',borderBottom:'1px solid var(--border)',padding:'32px 32px 24px',textAlign:'center'}}>
+          <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:52,height:52,background:'var(--accent)',borderRadius:12,marginBottom:14}}>
+            <svg width="26" height="26" fill="none" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M7 8h10M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
+          </div>
+          <div style={{color:'var(--navy-900)',fontSize:17,fontWeight:700}}>エラー回復システム</div>
+          <div style={{color:'var(--gray)',fontSize:12,marginTop:4}}>Error Recovery System</div>
+        </div>
+        <form onSubmit={handleSubmit} style={{padding:'28px 32px 32px'}}>
+          <div style={{marginBottom:16}}>
+            <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--navy-700)',marginBottom:6}}>ユーザーID</label>
+            <input value={id} onChange={e=>setId(e.target.value)} style={{width:'100%',padding:'10px 14px',border:'1.5px solid var(--border)',borderRadius:8,fontSize:14,outline:'none'}}
+              onFocus={e=>e.target.style.borderColor='var(--accent)'} onBlur={e=>e.target.style.borderColor='var(--border)'}
+              placeholder="例: tanaka" autoComplete="username"/>
+          </div>
+          <div style={{marginBottom:20}}>
+            <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--navy-700)',marginBottom:6}}>パスワード</label>
+            <input type="password" value={pw} onChange={e=>setPw(e.target.value)} style={{width:'100%',padding:'10px 14px',border:'1.5px solid var(--border)',borderRadius:8,fontSize:14,outline:'none'}}
+              onFocus={e=>e.target.style.borderColor='var(--accent)'} onBlur={e=>e.target.style.borderColor='var(--border)'}
+              placeholder="••••••••" autoComplete="current-password"/>
+          </div>
+          {err && <div style={{fontSize:12,color:'var(--red)',marginBottom:12,padding:'8px 12px',background:'var(--red-lt)',borderRadius:6}}>{err}</div>}
+          <button type="submit" disabled={loading}
+            style={{width:'100%',padding:'12px',background:loading?'#93c5fd':'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:loading?'wait':'pointer'}}>
+            {loading?'ログイン中...':'ログイン'}
+          </button>
+          <div style={{textAlign:'center',marginTop:14,fontSize:12,color:'var(--gray)'}}>
+            デモ：<code style={{background:'var(--gray-lt)',padding:'1px 6px',borderRadius:4}}>admin</code> でログインすると管理者権限
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ── Top Navigation (shared) ─────────────────────────────────
+const TopNav = ({ userId, isAdmin, currentPage, onNavigate, onLogout }) => {
+  const navItems = [
+    { id:'list',  label:'担当一覧', icon:<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+    { id:'chat',  label:'チャット', icon:<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+    ...(isAdmin ? [{ id:'admin', label:'管理者', icon:<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> }] : []),
+  ];
+  return (
+    <header style={{background:'#fff',borderBottom:'1px solid var(--border)',boxShadow:'var(--shadow-sm)',flexShrink:0}}>
+      {/* Brand row */}
+      <div style={{padding:'0 24px',height:52,display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--border)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:30,height:30,background:'var(--accent)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M7 8h10M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+          </div>
+          <span style={{fontWeight:700,fontSize:14,color:'var(--navy-900)'}}>エラー回復システム</span>
+          {isAdmin && <span style={{fontSize:11,background:'var(--accent-lt)',color:'var(--accent)',padding:'2px 8px',borderRadius:20,fontWeight:600}}>管理者</span>}
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <span style={{fontSize:13,color:'var(--gray)'}}>
+            <svg style={{verticalAlign:-2,marginRight:5}} width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            {userId}
+          </span>
+          <button onClick={onLogout} style={{background:'var(--gray-lt)',border:'1px solid var(--border)',color:'var(--navy-800)',borderRadius:6,padding:'5px 12px',fontSize:12,cursor:'pointer'}}>ログアウト</button>
+        </div>
+      </div>
+      {/* Tab row */}
+      <div style={{padding:'0 24px',display:'flex',gap:0,alignItems:'flex-end',height:40}}>
+        {navItems.map(item=>{
+          const active = currentPage===item.id;
+          return (
+            <button key={item.id} onClick={()=>onNavigate(item.id)}
+              style={{display:'flex',alignItems:'center',gap:6,padding:'0 18px',height:'100%',border:'none',borderBottom:`2px solid ${active?'var(--accent)':'transparent'}`,background:'none',color:active?'var(--accent)':'var(--gray)',fontWeight:active?600:400,fontSize:13,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap'}}>
+              {item.icon}{item.label}
+            </button>
+          );
+        })}
+      </div>
+    </header>
+  );
+};
+
+// ── ListPage ────────────────────────────────────────────────
+const ListPage = ({ onOpenChat, rowHeight, fontSize, userId, isAdmin }) => {
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({key:'no',dir:'asc'});
+  const PER_PAGE = 20;
+
+  // ログインユーザーの案件のみ表示（管理者は全件）
+  const myData = isAdmin ? sampleData : sampleData.filter(r=>r.assignee===userId);
+
+  const filtered = myData.filter(r=>{
+    const q = search.toLowerCase();
+    return (!q||r.secNo.toLowerCase().includes(q)||r.status.includes(q)||r.importDate.includes(q))
+      && (!filterStatus||r.status===filterStatus);
+  }).sort((a,b)=>{
+    let va=a[sort.key],vb=b[sort.key];
+    if(typeof va==='string') return sort.dir==='asc'?va.localeCompare(vb,'ja'):vb.localeCompare(va,'ja');
+    return sort.dir==='asc'?va-vb:vb-va;
+  });
+
+  const totalPages = Math.ceil(filtered.length/PER_PAGE);
+  const paged = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE);
+  const toggleSort = key=>{ setSort(s=>s.key===key?{...s,dir:s.dir==='asc'?'desc':'asc'}:{key,dir:'asc'}); setPage(1); };
+  const SortIcon = ({k})=> sort.key!==k ? <span style={{opacity:.3,marginLeft:4}}>↕</span> : <span style={{marginLeft:4,color:'var(--accent)'}}>{sort.dir==='asc'?'↑':'↓'}</span>;
+  const statusCounts = STATUSES.reduce((acc,s)=>{acc[s]=myData.filter(r=>r.status===s).length;return acc;},{});
+
+  return (
+    <div style={{flex:1,overflowY:'auto',padding:'24px 28px',fontSize}}>
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontSize:20,fontWeight:700,color:'var(--navy-900)'}}>担当一覧</h1>
+        <p style={{fontSize:13,color:'var(--gray)',marginTop:3}}>
+          {isAdmin ? `全担当者の案件を表示中（${sampleData.length}件）` : `${userId} さんに割り当てられた案件を表示中`}
+        </p>
+      </div>
+      {/* Status summary cards */}
+      <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'}}>
+        {STATUSES.map(s=>{
+          const st=STATUS_STYLE[s];
+          return (
+            <button key={s} onClick={()=>{setFilterStatus(filterStatus===s?'':s);setPage(1);}}
+              style={{padding:'10px 16px',borderRadius:8,border:`1.5px solid ${filterStatus===s?st.dot:'var(--border)'}`,background:filterStatus===s?st.bg:'#fff',cursor:'pointer',textAlign:'left',transition:'all .15s',boxShadow:filterStatus===s?`0 0 0 2px ${st.dot}30`:'var(--shadow-sm)'}}>
+              <div style={{fontSize:18,fontWeight:700,color:st.color}}>{statusCounts[s]}</div>
+              <div style={{fontSize:11,color:'var(--gray)',marginTop:2}}>{s}</div>
+            </button>
+          );
+        })}
+      </div>
+      {/* Search bar */}
+      <div style={{background:'#fff',borderRadius:10,padding:'12px 16px',marginBottom:16,boxShadow:'var(--shadow-sm)',display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+        <div style={{position:'relative',flex:'1 1 200px'}}>
+          <svg style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',opacity:.4}} width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#374151" strokeWidth="2"/><path d="M16.5 16.5l4 4" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>
+          <input value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="証券番号・ステータスで検索..."
+            style={{width:'100%',padding:'8px 12px 8px 32px',border:'1.5px solid var(--border)',borderRadius:7,fontSize:13,outline:'none'}}
+            onFocus={e=>e.target.style.borderColor='var(--accent)'} onBlur={e=>e.target.style.borderColor='var(--border)'}/>
+        </div>
+        <select value={filterStatus} onChange={e=>{setFilterStatus(e.target.value);setPage(1);}}
+          style={{padding:'8px 12px',border:'1.5px solid var(--border)',borderRadius:7,fontSize:13,background:'#fff',color:'var(--navy-800)',outline:'none',minWidth:120}}>
+          <option value="">全ステータス</option>
+          {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <span style={{fontSize:13,color:'var(--gray)',whiteSpace:'nowrap'}}>{filtered.length}件</span>
+      </div>
+      {/* Table */}
+      <div style={{background:'#fff',borderRadius:10,boxShadow:'var(--shadow-sm)',overflow:'hidden'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize}}>
+          <thead>
+            <tr style={{background:'var(--navy-50)',borderBottom:'2px solid var(--border)'}}>
+              {[['no','No.'],['secNo','証券番号'],['status','ステータス'],['importDate','取込日'],...(isAdmin?[['assignee','担当者']]:[])] .map(([k,label])=>(
+                <th key={k} onClick={()=>toggleSort(k)} style={{padding:'11px 18px',textAlign:'left',fontSize:12,fontWeight:700,color:'var(--navy-700)',cursor:'pointer',userSelect:'none',whiteSpace:'nowrap'}}>
+                  {label}<SortIcon k={k}/>
+                </th>
+              ))}
+              <th style={{padding:'11px 18px',textAlign:'center',fontSize:12,fontWeight:700,color:'var(--navy-700)'}}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paged.map((row,i)=>(
+              <tr key={row.no} style={{borderBottom:'1px solid var(--border)',background:i%2===0?'#fff':'var(--navy-50)',transition:'background .1s'}}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--accent-lt)'}
+                onMouseLeave={e=>e.currentTarget.style.background=i%2===0?'#fff':'var(--navy-50)'}>
+                <td style={{padding:`${rowHeight/2-8}px 18px`,color:'var(--gray)',fontSize:12}}>{pad(row.no,3)}</td>
+                <td style={{padding:`${rowHeight/2-8}px 18px`,fontWeight:600,color:'var(--navy-900)',fontFamily:'monospace',fontSize:13}}>{row.secNo}</td>
+                <td style={{padding:`${rowHeight/2-8}px 18px`}}><StatusBadge status={row.status}/></td>
+                <td style={{padding:`${rowHeight/2-8}px 18px`,color:'var(--gray)',fontSize:12}}>{row.importDate}</td>
+                {isAdmin && <td style={{padding:`${rowHeight/2-8}px 18px`,fontSize:12,color:'var(--navy-700)'}}>{row.assignee}</td>}
+                <td style={{padding:`${rowHeight/2-8}px 18px`,textAlign:'center'}}>
+                  <button onClick={()=>onOpenChat(row)}
+                    style={{padding:'5px 14px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:6,fontSize:12,fontWeight:600,cursor:'pointer',transition:'opacity .15s'}}
+                    onMouseEnter={e=>e.target.style.opacity='.85'} onMouseLeave={e=>e.target.style.opacity='1'}>
+                    チャットを開く
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {paged.length===0 && <tr><td colSpan={5} style={{padding:40,textAlign:'center',color:'var(--gray)',fontSize:14}}>該当するデータがありません</td></tr>}
+          </tbody>
+        </table>
+        {totalPages>1 && (
+          <div style={{padding:'12px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:'1px solid var(--border)',background:'var(--navy-50)'}}>
+            <span style={{fontSize:12,color:'var(--gray)'}}>{(page-1)*PER_PAGE+1}〜{Math.min(page*PER_PAGE,filtered.length)} / {filtered.length}件</span>
+            <div style={{display:'flex',gap:4}}>
+              {[['«',1],['‹',page-1]].map(([l,p])=>(
+                <button key={l} onClick={()=>setPage(p)} disabled={page===1} style={pgBtn(page===1)}>{l}</button>
+              ))}
+              {Array.from({length:totalPages},(_,i)=>i+1).filter(p=>Math.abs(p-page)<=2).map(p=>(
+                <button key={p} onClick={()=>setPage(p)} style={pgBtn(false,p===page)}>{p}</button>
+              ))}
+              {[['›',page+1],['»',totalPages]].map(([l,p])=>(
+                <button key={l} onClick={()=>setPage(p)} disabled={page===totalPages} style={pgBtn(page===totalPages)}>{l}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+const pgBtn=(disabled,active=false)=>({width:30,height:30,border:'1.5px solid var(--border)',borderRadius:6,background:active?'var(--accent)':'#fff',color:active?'#fff':disabled?'#d1d5db':'var(--navy-800)',fontSize:13,fontWeight:500,cursor:disabled?'default':'pointer'});
+
+// ── RecoveryTable: shown as the first AI message ────────────
+const RecoveryTable = ({ secNo }) => {
+  const rows = [
+    {
+      section:'契約者', hasError:true,
+      fields:[
+        {label:'契約者名', value:'ﾏﾂﾓﾄﾅｵｷ'},
+        {label:'契〒',     value:'*000', error:true},
+        {label:'契住所',   value:'', error:true},
+      ],
+      recoveries:[
+        {label:'契〒_回復結果',   value:'060-0001'},
+        {label:'契〒_回復理由',   value:`[契約者住所(〒)]既契約より修正：証券番号${secNo}`},
+        {label:'契住所_回復結果', value:'ﾎｯｶｲﾄﾞｳｻｯﾎﾟﾛｼﾁｭｳｵｳｸｷﾀ1ｼﾞｮｳﾆｼ11-11-11'},
+        {label:'契住所_回復理由', value:`[契約者住所(〒・カナ)]既契約より修正：証券番号${secNo}`},
+      ],
+    },
+    {
+      section:'被保険者', hasError:false,
+      fields:[
+        {label:'第一被名', value:'ｷﾑﾗｻﾕﾘ'},
+        {label:'被〒',     value:'060-0001'},
+        {label:'被住所',   value:'ﾎｯｶｲﾄﾞｳｻｯﾎﾟﾛｼﾁｭｳｵｳｸｷﾀ2ｼﾞｮｳﾆｼ12-12-12'},
+      ],
+      recoveries:[
+        {label:'被〒_回復結果',   value:'—'},
+        {label:'被〒_回復理由',   value:'—'},
+        {label:'被住所_回復結果', value:'—'},
+        {label:'被住所_回復理由', value:'—'},
+      ],
+    },
+  ];
+
+  const cellTh = { padding:'7px 10px', textAlign:'left', fontSize:11, fontWeight:700, color:'var(--navy-700)', background:'var(--navy-50)', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' };
+  const cellTd = { padding:'7px 10px', fontSize:12, color:'var(--navy-900)', borderBottom:'1px solid var(--border)', verticalAlign:'top' };
+
+  return (
+    <div style={{maxWidth:'94%',background:'#fff',borderRadius:10,border:'1px solid var(--border)',boxShadow:'var(--shadow-sm)',overflow:'hidden',fontSize:12}}>
+      <div style={{padding:'10px 14px',background:'var(--accent-lt)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:8}}>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <div style={{fontSize:13,fontWeight:700,color:'var(--accent)'}}>一次チェック／エラー回復結果</div>
+        <span style={{fontSize:11,color:'var(--gray)',marginLeft:'auto',fontFamily:'monospace'}}>{secNo}</span>
+      </div>
+
+      {rows.map((r,i)=>(
+        <div key={i} style={{padding:'12px 14px',borderBottom:i<rows.length-1?'1px solid var(--border)':'none'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+            <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'2px 9px',borderRadius:20,fontSize:11,fontWeight:700,background:r.hasError?'var(--red-lt)':'var(--green-lt)',color:r.hasError?'var(--red)':'var(--green)'}}>
+              {r.hasError?'⚠ エラーあり（要確認）':'✓ エラーなし'}
+            </span>
+            <span style={{fontSize:13,fontWeight:700,color:'var(--navy-900)'}}>■{r.section}</span>
+          </div>
+          {/* Input values */}
+          <table style={{width:'100%',borderCollapse:'collapse',marginBottom:8,border:'1px solid var(--border)',borderRadius:6,overflow:'hidden'}}>
+            <thead><tr><th style={{...cellTh,width:'35%'}}>項目</th><th style={cellTh}>入力値</th></tr></thead>
+            <tbody>
+              {r.fields.map((f,j)=>(
+                <tr key={j} style={{background:f.error?'var(--red-lt)':'#fff'}}>
+                  <td style={{...cellTd,color:'var(--gray)',fontWeight:600}}>{f.label}</td>
+                  <td style={{...cellTd,fontFamily:'monospace',color:f.error?'var(--red)':'var(--navy-900)'}}>{f.value||'(空欄)'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {/* Recovery result */}
+          <div style={{fontSize:11,fontWeight:700,color:'var(--navy-700)',marginBottom:4}}>【一次チェック回復結果】</div>
+          <table style={{width:'100%',borderCollapse:'collapse',border:'1px solid var(--border)',borderRadius:6,overflow:'hidden'}}>
+            <thead><tr><th style={{...cellTh,width:'35%'}}>項目</th><th style={cellTh}>内容</th></tr></thead>
+            <tbody>
+              {r.recoveries.map((f,j)=>{
+                const empty = f.value==='—' || f.value==='';
+                return (
+                  <tr key={j} style={{background: empty?'#fff':'var(--accent-lt)'}}>
+                    <td style={{...cellTd,color:'var(--gray)',fontWeight:600}}>{f.label}</td>
+                    <td style={{...cellTd,fontFamily:'monospace',color:empty?'var(--gray)':'var(--navy-900)',wordBreak:'break-all'}}>{f.value}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ── ChatPage ────────────────────────────────────────────────
+const ChatPage = ({ tabs, activeTabId, onTabChange, onTabClose, chatSplitPct, fontSize, messages, setMessages }) => {
+  const [input, setInput] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({x:0,y:0});
+  const [dragging, setDragging] = useState(false);
+  const [viewerTab, setViewerTab] = useState('scan');
+  const dragStart = useRef(null);
+  const msgEndRef = useRef(null);
+  const activeTab = tabs.find(t=>t.id===activeTabId);
+
+  useEffect(()=>{
+    if(activeTab && !messages[activeTabId])
+      setMessages(m=>({...m,[activeTabId]:[
+        {role:'ai',type:'recovery',secNo:activeTab.secNo},
+        {role:'ai',text:`証券番号「${activeTab.secNo}」のエラー回復結果を上記の通り表示しました。ご確認の上、必要な対応をお知らせください。`}
+      ]}));
+  },[activeTabId]);
+
+  useEffect(()=>{ msgEndRef.current?.scrollIntoView({behavior:'smooth'}); },[messages[activeTabId], typing]);
+  useEffect(()=>{setScale(1);setOffset({x:0,y:0});},[activeTabId,viewerTab]);
+
+  const msgs = messages[activeTabId]||[];
+  const sendMsg = ()=>{
+    if(!input.trim()||typing) return;
+    const txt = input.trim();
+    setMessages(m=>({...m,[activeTabId]:[...(m[activeTabId]||[]),{role:'user',text:txt}]}));
+    setInput(''); setTyping(true);
+    setTimeout(()=>{
+      const fn = AI_RESPONSES[Math.floor(Math.random()*AI_RESPONSES.length)];
+      setMessages(m=>({...m,[activeTabId]:[...(m[activeTabId]||[]),{role:'ai',text:fn(activeTab?.secNo)}]}));
+      setTyping(false);
+    }, 800+Math.random()*600);
+  };
+
+  const handleWheel=e=>{e.preventDefault();setScale(s=>Math.max(0.3,Math.min(4,s-e.deltaY*0.001)));};
+  const handleMouseDown=e=>{setDragging(true);dragStart.current={x:e.clientX-offset.x,y:e.clientY-offset.y};};
+  const handleMouseMove=e=>{if(!dragging||!dragStart.current)return;setOffset({x:e.clientX-dragStart.current.x,y:e.clientY-dragStart.current.y});};
+  const handleMouseUp=()=>setDragging(false);
+
+  if(tabs.length===0) return (
+    <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,color:'var(--gray)'}}>
+      <svg width="48" height="48" fill="none" viewBox="0 0 24 24" opacity=".3"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+      <div style={{fontSize:14}}>「担当一覧」から証券番号を選択してチャットを開いてください</div>
+    </div>
+  );
+
+  return (
+    <div style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+      {/* Sub-tab bar */}
+      <div style={{background:'var(--gray-lt)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'flex-end',overflowX:'auto',flexShrink:0,paddingLeft:8,paddingTop:6}}>
+        {tabs.map(tab=>{
+          const active=tab.id===activeTabId;
+          return (
+            <div key={tab.id} onClick={()=>onTabChange(tab.id)}
+              style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',cursor:'pointer',background:active?'#fff':'transparent',borderTop:`2px solid ${active?'var(--accent)':'transparent'}`,border:active?'1px solid var(--border)':'1px solid transparent',borderBottom:active?'1px solid #fff':'1px solid transparent',borderRadius:'6px 6px 0 0',marginRight:2,flexShrink:0,transition:'background .12s'}}>
+              <StatusBadge status={tab.status}/>
+              <span style={{fontSize:12,fontWeight:active?700:400,color:active?'var(--navy-900)':'var(--gray)',whiteSpace:'nowrap',maxWidth:130,overflow:'hidden',textOverflow:'ellipsis'}}>{tab.secNo}</span>
+              <button onClick={e=>{e.stopPropagation();onTabClose(tab.id);}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--gray)',fontSize:13,lineHeight:1,padding:'0 2px',borderRadius:3}}
+                onMouseEnter={e=>e.target.style.color='var(--red)'} onMouseLeave={e=>e.target.style.color='var(--gray)'}>✕</button>
+            </div>
+          );
+        })}
+      </div>
+      {/* Split pane */}
+      {activeTab && (
+        <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
+          {/* Chat */}
+          <div style={{width:`${chatSplitPct}%`,borderRight:'1px solid var(--border)',display:'flex',flexDirection:'column',background:'#fff',minWidth:0}}>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)',background:'var(--navy-50)'}}>
+              <div style={{fontSize:13,fontWeight:700,color:'var(--navy-900)'}}>{activeTab.secNo}</div>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
+                <StatusBadge status={activeTab.status}/>
+                <span style={{fontSize:11,color:'var(--gray)'}}>取込日: {activeTab.importDate}</span>
+              </div>
+            </div>
+            <div style={{flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12}}>
+              {msgs.map((m,i)=>(
+                <div key={i} style={{display:'flex',flexDirection:m.role==='user'?'row-reverse':'row',gap:8,alignItems:'flex-end',animation:'fadeIn .2s ease'}}>
+                  {m.role==='ai' && <div style={{width:28,height:28,borderRadius:'50%',background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+                  </div>}
+                  {m.type==='recovery' ? (
+                    <RecoveryTable secNo={m.secNo}/>
+                  ) : (
+                    <div style={{maxWidth:'78%',padding:'9px 13px',borderRadius:m.role==='user'?'14px 14px 4px 14px':'14px 14px 14px 4px',background:m.role==='user'?'var(--accent)':'var(--navy-50)',color:m.role==='user'?'#fff':'var(--navy-900)',fontSize:13,lineHeight:1.6,boxShadow:'var(--shadow-sm)'}}>
+                      {m.text}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {typing && (
+                <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+                  <div style={{width:28,height:28,borderRadius:'50%',background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+                  </div>
+                  <div style={{padding:'10px 14px',borderRadius:'14px 14px 14px 4px',background:'var(--navy-50)',display:'flex',gap:4,alignItems:'center'}}>
+                    {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:'50%',background:'var(--navy-500)',animation:'bounce 1.2s infinite',animationDelay:`${j*0.2}s`}}/>)}
+                  </div>
+                </div>
+              )}
+              <div ref={msgEndRef}/>
+            </div>
+            <div style={{padding:'10px 14px',borderTop:'1px solid var(--border)',background:'var(--navy-50)',display:'flex',gap:8,alignItems:'flex-end'}}>
+              <textarea value={input} onChange={e=>setInput(e.target.value)}
+                onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}}
+                placeholder="メッセージを入力... (Enterで送信)" rows={2}
+                style={{flex:1,padding:'8px 12px',border:'1.5px solid var(--border)',borderRadius:8,fontSize:13,resize:'none',outline:'none',lineHeight:1.5}}
+                onFocus={e=>e.target.style.borderColor='var(--accent)'} onBlur={e=>e.target.style.borderColor='var(--border)'}/>
+              <button onClick={sendMsg} disabled={!input.trim()||typing}
+                style={{padding:'9px 14px',background:input.trim()&&!typing?'var(--accent)':'#d1d5db',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:600,cursor:input.trim()&&!typing?'pointer':'default',height:42,display:'flex',alignItems:'center',gap:5}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                送信
+              </button>
+            </div>
+          </div>
+          {/* Image viewer */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',background:'#f0f1f3',minWidth:0}}>
+            {/* Viewer tabs */}
+            <div style={{display:'flex',alignItems:'flex-end',background:'#e5e7eb',paddingLeft:8,paddingTop:6,borderBottom:'1px solid var(--border)',flexShrink:0,gap:2}}>
+              {[
+                {id:'scan',label:'申込書スキャン',icon:<path d="M4 4h12l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z M14 4v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>},
+                {id:'contract',label:'既契約情報',icon:<path d="M9 12h6m-6 4h6M7 8h10M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>},
+              ].map(t=>{
+                const active=viewerTab===t.id;
+                return (
+                  <button key={t.id} onClick={()=>setViewerTab(t.id)}
+                    style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',border:'1px solid var(--border)',borderBottom:active?'1px solid #fff':'1px solid var(--border)',borderRadius:'7px 7px 0 0',background:active?'#fff':'transparent',color:active?'var(--navy-900)':'var(--gray)',fontSize:12,fontWeight:active?700:500,cursor:'pointer',marginBottom:-1,position:'relative'}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">{t.icon}</svg>
+                    {t.label}
+                    {t.id==='contract' && <span style={{marginLeft:4,padding:'1px 7px',borderRadius:10,fontSize:9,fontWeight:700,background:active?'var(--accent-lt)':'#d1d5db',color:active?'var(--accent)':'#6b7280'}}>参考</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{padding:'8px 14px',background:'#fff',display:'flex',alignItems:'center',gap:10,flexShrink:0,borderBottom:'1px solid var(--border)'}}>
+              <span style={{color:'var(--gray)',fontSize:12,fontWeight:600}}>
+                {viewerTab==='scan' ? '申込書スキャン画像' : 'エラー回復の根拠となった既契約データ'}
+              </span>
+              <div style={{flex:1}}/>
+              <button onClick={()=>setScale(s=>Math.min(4,s+0.2))} style={zBtn}>＋</button>
+              <span style={{color:'var(--gray)',fontSize:12,minWidth:40,textAlign:'center'}}>{Math.round(scale*100)}%</span>
+              <button onClick={()=>setScale(s=>Math.max(0.3,s-0.2))} style={zBtn}>－</button>
+              <button onClick={()=>{setScale(1);setOffset({x:0,y:0});}} style={{...zBtn,minWidth:56}}>リセット</button>
+            </div>
+            <div style={{flex:1,overflow:'hidden',cursor:dragging?'grabbing':'grab',position:'relative',userSelect:'none'}}
+              onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:24,overflow:'hidden'}}>
+                {viewerTab==='scan'
+                  ? <ScanPlaceholder scale={scale} offset={offset} secNo={activeTab.secNo}/>
+                  : <ContractPlaceholder scale={scale} offset={offset} secNo={activeTab.secNo}/>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+const zBtn={background:'var(--gray-lt)',border:'1px solid var(--border)',color:'var(--navy-800)',borderRadius:5,padding:'4px 10px',fontSize:13,cursor:'pointer'};
+
+// ── AdminPage ────────────────────────────────────────────────
+const AdminPage = ({ fontSize }) => {
+  const [users, setUsers] = useState(SAMPLE_USERS);
+  const [editId, setEditId] = useState(null);
+  const [editRole, setEditRole] = useState('');
+  const statCounts = STATUSES.reduce((a,s)=>{a[s]=sampleData.filter(r=>r.status===s).length;return a;},{});
+
+  return (
+    <div style={{flex:1,overflowY:'auto',padding:'24px 28px',fontSize}}>
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontSize:20,fontWeight:700,color:'var(--navy-900)'}}>管理者ダッシュボード</h1>
+        <p style={{fontSize:13,color:'var(--gray)',marginTop:3}}>システム全体の状況とユーザー管理</p>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:12,marginBottom:28}}>
+        <StatCard label="総件数" value={sampleData.length} color="var(--accent)"/>
+        {STATUSES.map(s=><StatCard key={s} label={s} value={statCounts[s]} color={STATUS_STYLE[s].dot}/>)}
+      </div>
+
+      {/* User management */}
+      <div style={{background:'#fff',borderRadius:10,boxShadow:'var(--shadow-sm)',overflow:'hidden'}}>
+        <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{fontWeight:700,fontSize:14,color:'var(--navy-900)'}}>ユーザー管理</div>
+          <span style={{fontSize:12,color:'var(--gray)'}}>{users.length}名</span>
+        </div>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize}}>
+          <thead>
+            <tr style={{background:'var(--navy-50)',borderBottom:'1px solid var(--border)'}}>
+              {['ユーザーID','氏名','部署','権限','最終ログイン','操作'].map(h=>(
+                <th key={h} style={{padding:'10px 16px',textAlign:'left',fontSize:12,fontWeight:700,color:'var(--navy-700)',whiteSpace:'nowrap'}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u,i)=>(
+              <tr key={u.id} style={{borderBottom:'1px solid var(--border)',background:i%2===0?'#fff':'var(--navy-50)'}}>
+                <td style={{padding:'10px 16px',fontFamily:'monospace',fontSize:12,color:'var(--gray)'}}>{u.id}</td>
+                <td style={{padding:'10px 16px',fontWeight:600,color:'var(--navy-900)'}}>{u.name}</td>
+                <td style={{padding:'10px 16px',fontSize:12,color:'var(--gray)'}}>{u.dept}</td>
+                <td style={{padding:'10px 16px'}}>
+                  {editId===u.id ? (
+                    <select value={editRole} onChange={e=>setEditRole(e.target.value)}
+                      style={{padding:'4px 8px',border:'1px solid var(--border)',borderRadius:5,fontSize:12,background:'#fff'}}>
+                      <option value="user">一般</option>
+                      <option value="admin">管理者</option>
+                    </select>
+                  ) : (
+                    <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'2px 8px',borderRadius:20,fontSize:12,fontWeight:600,background:u.role==='admin'?'var(--accent-lt)':'var(--gray-lt)',color:u.role==='admin'?'var(--accent)':'var(--gray)'}}>
+                      {u.role==='admin'?'管理者':'一般'}
+                    </span>
+                  )}
+                </td>
+                <td style={{padding:'10px 16px',fontSize:12,color:'var(--gray)'}}>{u.lastLogin}</td>
+                <td style={{padding:'10px 16px'}}>
+                  {editId===u.id ? (
+                    <div style={{display:'flex',gap:6}}>
+                      <button onClick={()=>{setUsers(us=>us.map(x=>x.id===u.id?{...x,role:editRole}:x));setEditId(null);}}
+                        style={{padding:'4px 10px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,fontSize:12,cursor:'pointer'}}>保存</button>
+                      <button onClick={()=>setEditId(null)}
+                        style={{padding:'4px 10px',background:'var(--gray-lt)',border:'1px solid var(--border)',color:'var(--gray)',borderRadius:5,fontSize:12,cursor:'pointer'}}>キャンセル</button>
+                    </div>
+                  ) : (
+                    <button onClick={()=>{setEditId(u.id);setEditRole(u.role);}}
+                      style={{padding:'4px 10px',background:'var(--gray-lt)',border:'1px solid var(--border)',color:'var(--navy-800)',borderRadius:5,fontSize:12,cursor:'pointer'}}>編集</button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const StatCard = ({ label, value, color }) => (
+  <div style={{background:'#fff',borderRadius:10,padding:'16px 18px',boxShadow:'var(--shadow-sm)',borderLeft:`3px solid ${color}`}}>
+    <div style={{fontSize:22,fontWeight:700,color}}>{value}</div>
+    <div style={{fontSize:12,color:'var(--gray)',marginTop:4}}>{label}</div>
+  </div>
+);
+
+// ── App ──────────────────────────────────────────────────────
+const App = () => {
+  const [loggedIn, setLoggedIn] = useState(()=>!!localStorage.getItem('app_userId'));
+  const [userId, setUserId] = useState(()=>localStorage.getItem('app_userId')||'');
+  const [isAdmin, setIsAdmin] = useState(()=>localStorage.getItem('app_role')==='admin');
+  const [page, setPage] = useState(()=>localStorage.getItem('app_page')||'list');
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
+  const [chatMessages, setChatMessages] = useState({});
+  const [rowHeight, setRowHeight] = useState(44);
+  const [fontSize, setFontSize] = useState(13);
+  const [chatSplitPct, setChatSplitPct] = useState(42);
+
+  const handleLogin = id => {
+    const admin = id.toLowerCase()==='admin'||id.toLowerCase().includes('admin');
+    setUserId(id); setIsAdmin(admin); setLoggedIn(true);
+    localStorage.setItem('app_userId', id);
+    localStorage.setItem('app_role', admin?'admin':'user');
+    setPage('list');
+  };
+  const handleLogout = () => {
+    localStorage.clear();
+    setLoggedIn(false); setUserId(''); setIsAdmin(false); setTabs([]); setActiveTabId(null);
+  };
+  const navigate = p => {
+    setPage(p);
+    localStorage.setItem('app_page', p);
+    if(p==='admin'&&!isAdmin) return; // guard
+  };
+  const openChat = row => {
+    if(!tabs.find(t=>t.id===row.secNo)) setTabs(t=>[...t,{...row,id:row.secNo}]);
+    setActiveTabId(row.secNo);
+    setPage('chat');
+    localStorage.setItem('app_page','chat');
+  };
+  const closeTab = id => {
+    setTabs(t=>{
+      const next=t.filter(x=>x.id!==id);
+      if(activeTabId===id) setActiveTabId(next.length>0?next[next.length-1].id:null);
+      return next;
+    });
+    // タブを閉じた時のみ履歴を削除
+    setChatMessages(m=>{ const n={...m}; delete n[id]; return n; });
+  };
+
+  useEffect(()=>{
+    const panel=document.getElementById('tweaks-panel');
+    const rowEl=document.getElementById('tw-row-height');
+    const fontEl=document.getElementById('tw-font-size');
+    const splitEl=document.getElementById('tw-chat-split');
+    if(!panel) return;
+    rowEl?.addEventListener('input',e=>setRowHeight(+e.target.value));
+    fontEl?.addEventListener('input',e=>setFontSize(+e.target.value));
+    splitEl?.addEventListener('change',e=>setChatSplitPct(+e.target.value));
+    window.addEventListener('message',e=>{
+      if(e.data?.type==='__activate_edit_mode') panel.classList.add('visible');
+      if(e.data?.type==='__deactivate_edit_mode') panel.classList.remove('visible');
+    });
+    window.parent.postMessage({type:'__edit_mode_available'},'*');
+  },[]);
+
+  if(!loggedIn) return <LoginPage onLogin={handleLogin}/>;
+
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',fontSize,overflow:'hidden'}}>
+      <TopNav userId={userId} isAdmin={isAdmin} currentPage={page} onNavigate={navigate} onLogout={handleLogout}/>
+      <div style={{flex:1,display:'flex',flexDirection:'column',minHeight:0,overflow:'hidden'}}>
+        {page==='list' && <ListPage onOpenChat={openChat} rowHeight={rowHeight} fontSize={fontSize} userId={userId} isAdmin={isAdmin}/>}
+        {page==='chat' && <ChatPage tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} onTabClose={closeTab} chatSplitPct={chatSplitPct} fontSize={fontSize} messages={chatMessages} setMessages={setChatMessages}/>}
+        {page==='admin' && isAdmin && <AdminPage fontSize={fontSize}/>}
+        {page==='admin' && !isAdmin && <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--red)',fontSize:14}}>管理者権限がありません</div>}
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

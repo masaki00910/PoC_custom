@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{93138c90-930c-f111-8406-002248ef335d}'
+  '@Name': （AI住所漢字カナ一致検証用）F-00-001_読み取り・住所漢字カナ一致・住所漢字カナ補完
+  JsonFileName: /modernflows/93138c90-930c-f111-8406-002248ef335d/AIF-00-001_-93138C90-930C-F111-8406-002248EF335D.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.2.0.1
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': （AI住所漢字カナ一致検証用）F-00-001_読み取り・住所漢字カナ一致・住所漢字カナ補完

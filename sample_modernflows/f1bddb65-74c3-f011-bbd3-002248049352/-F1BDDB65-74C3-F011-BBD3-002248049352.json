@@ -1,0 +1,414 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_da3fd"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "行が追加、変更、または削除された場合": {
+          "metadata": {
+            "operationMetadataId": "a2fcc256-366d-4c2c-857d-f27b739c83ec"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "ca_document_import",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "ca_reportstatus"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "スイッチ": {
+          "runAfter": {
+            "マスタ取得": [
+              "Succeeded"
+            ]
+          },
+          "cases": {
+            "OCR実行中": {
+              "case": 0,
+              "actions": {
+                "行の更新-ステージOCR実行中更新": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "db59f1f6-78d3-4ca8-8c00-f540ab8c8385"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ca_reportprocessstatuses",
+                      "recordId": "@outputs('作成-BPF値ID取得')",
+                      "item/activestageid@odata.bind": "processstages(@{outputs('作成-OCR実行中ステージID取得')})"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              }
+            },
+            "新規作成": {
+              "case": 1,
+              "actions": {
+                "行の更新-ステージ新規作成更新": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "db59f1f6-78d3-4ca8-8c00-f540ab8c8385"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ca_reportprocessstatuses",
+                      "recordId": "@outputs('作成-BPF値ID取得')",
+                      "item/activestageid@odata.bind": "processstages(@{outputs('作成-新規作成ステージID取得')})"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              }
+            },
+            "補正済": {
+              "case": 2,
+              "actions": {
+                "行の更新-ステージ補正済更新": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "db59f1f6-78d3-4ca8-8c00-f540ab8c8385"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ca_reportprocessstatuses",
+                      "recordId": "@outputs('作成-BPF値ID取得')",
+                      "item/activestageid@odata.bind": "processstages(@{outputs('作成-補正済ステージID取得')})"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              }
+            },
+            "入力中": {
+              "case": 3,
+              "actions": {
+                "行の更新-ステージ入力中更新": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "db59f1f6-78d3-4ca8-8c00-f540ab8c8385"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ca_reportprocessstatuses",
+                      "recordId": "@outputs('作成-BPF値ID取得')",
+                      "item/activestageid@odata.bind": "processstages(@{outputs('作成-入力中ステージID取得')})"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              }
+            },
+            "起票済": {
+              "case": 4,
+              "actions": {
+                "行の更新-ステージOCR起票済更新": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "db59f1f6-78d3-4ca8-8c00-f540ab8c8385"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ca_reportprocessstatuses",
+                      "recordId": "@outputs('作成-BPF値ID取得')",
+                      "item/activestageid@odata.bind": "processstages(@{outputs('作成-起票済ステージID取得')})"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "actions": {}
+          },
+          "expression": "@triggerOutputs()?['body/ca_reportstatus']",
+          "metadata": {
+            "operationMetadataId": "5db341be-8511-49a2-b02f-8f69612a4bf3"
+          },
+          "type": "Switch"
+        },
+        "マスタ取得": {
+          "actions": {
+            "行を一覧にする-BPF値取得": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "08fe839e-6f50-4484-b0f4-8c15e9f682e4"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "ca_reportprocessstatuses",
+                  "$select": "bpf_ca_document_importid",
+                  "$filter": "_bpf_ca_document_importid_value eq @{triggerOutputs()?['body/ca_document_importid']}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "作成-BPF値ID取得": {
+              "runAfter": {
+                "行を一覧にする-BPF値取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3dec6eae-1d04-4333-a5df-536dbc45fef6"
+              },
+              "type": "Compose",
+              "inputs": "@outputs('行を一覧にする-BPF値取得')?['body/value'][0]?['businessprocessflowinstanceid']"
+            },
+            "プロセスステージ「新規作成」のIDを取得する": {
+              "runAfter": {
+                "作成-OCR実行中ステージID取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d6811a-9fb0-49c8-afab-c167b69f86c1"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "processstages",
+                  "$filter": "stagename eq '新規作成'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "作成-新規作成ステージID取得": {
+              "runAfter": {
+                "プロセスステージ「新規作成」のIDを取得する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3dec6eae-1d04-4333-a5df-536dbc45fef6"
+              },
+              "type": "Compose",
+              "inputs": "@outputs('プロセスステージ「新規作成」のIDを取得する')?['body/value'][0]?['processstageid']"
+            },
+            "プロセスステージ「補正済」のIDを取得する": {
+              "runAfter": {
+                "作成-新規作成ステージID取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d6811a-9fb0-49c8-afab-c167b69f86c1"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "processstages",
+                  "$filter": "stagename eq '補正済'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "作成-補正済ステージID取得": {
+              "runAfter": {
+                "プロセスステージ「補正済」のIDを取得する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3dec6eae-1d04-4333-a5df-536dbc45fef6"
+              },
+              "type": "Compose",
+              "inputs": "@outputs('プロセスステージ「補正済」のIDを取得する')?['body/value'][0]?['processstageid']"
+            },
+            "プロセスステージ「入力中」のIDを取得する": {
+              "runAfter": {
+                "作成-補正済ステージID取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d6811a-9fb0-49c8-afab-c167b69f86c1"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "processstages",
+                  "$filter": "stagename eq '入力中'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "作成-入力中ステージID取得": {
+              "runAfter": {
+                "プロセスステージ「入力中」のIDを取得する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3dec6eae-1d04-4333-a5df-536dbc45fef6"
+              },
+              "type": "Compose",
+              "inputs": "@outputs('プロセスステージ「入力中」のIDを取得する')?['body/value'][0]?['processstageid']"
+            },
+            "プロセスステージ「起票済」のIDを取得する": {
+              "runAfter": {
+                "作成-入力中ステージID取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d6811a-9fb0-49c8-afab-c167b69f86c1"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "processstages",
+                  "$filter": "stagename eq '起票済'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "作成-起票済ステージID取得": {
+              "runAfter": {
+                "プロセスステージ「起票済」のIDを取得する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3dec6eae-1d04-4333-a5df-536dbc45fef6"
+              },
+              "type": "Compose",
+              "inputs": "@outputs('プロセスステージ「起票済」のIDを取得する')?['body/value'][0]?['processstageid']"
+            },
+            "プロセスステージ「OCR実行中」のIDを取得する": {
+              "runAfter": {
+                "作成-BPF値ID取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d6811a-9fb0-49c8-afab-c167b69f86c1"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "processstages",
+                  "$filter": "stagename eq 'OCR実行中'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "作成-OCR実行中ステージID取得": {
+              "runAfter": {
+                "プロセスステージ「OCR実行中」のIDを取得する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3dec6eae-1d04-4333-a5df-536dbc45fef6"
+              },
+              "type": "Compose",
+              "inputs": "@outputs('プロセスステージ「OCR実行中」のIDを取得する')?['body/value'][0]?['processstageid']"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "5b066eae-c34e-4a5c-a8d5-0bc50143dda5"
+          },
+          "type": "Scope"
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,561 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_00509"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "ドキュメント (ca_shared_sharepointonline_e852265dbd1b4725a8ccf05ff09d4da3)": {
+          "defaultValue": "bc82a0c0-0fb5-41bf-955a-ee86cc35cd59",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_shared_sharepointonline_e852265dbd1b4725a8ccf05ff09d4da3"
+          }
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/pm",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "書類選択ID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "書類選択で選択した書類選択IDを格納",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "担当者ID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "フロー実行者のIDを格納",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "5df4d438-9afa-4787-9671-56a76de01953"
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "ファイルの取得_(プロパティのみ)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                  "table": "@parameters('ドキュメント (ca_shared_sharepointonline_e852265dbd1b4725a8ccf05ff09d4da3)')",
+                  "folderPath": "/Shared Documents/General/OCR-SampleData/見積書",
+                  "viewScopeOption": "Default"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GetFileItems",
+                  "connectionName": "shared_sharepointonline"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 5000
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "4b4be46d-0fff-4ee5-931b-28046ed4dfe6"
+              }
+            },
+            "Apply_to_each": {
+              "type": "Foreach",
+              "foreach": "@outputs('ファイルの取得_(プロパティのみ)')?['body/value']",
+              "actions": {
+                "行を一覧にする(インポート済チェック)": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "@variables('管理テーブル')",
+                      "$filter": "cre00_document_path eq '@{items('Apply_to_each')?['{FullPath}']}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "8a0baf71-fd4e-4225-b230-ae32d19767b8"
+                  }
+                },
+                "インポート済？": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "greaterOrEquals": [
+                          "@length(outputs('行を一覧にする(インポート済チェック)')?['body/value'])",
+                          1
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "文字列変数に追加(改行インポート済ファイル)": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "インポート済ファイル",
+                        "value": "@concat(decodeUriComponent('%0D%0A'), item()?['{FilenameWithExtension}'])"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ef840cdd-13d1-408d-8060-75213088ad2b"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "管理テーブルへの更新": {
+                        "type": "Compose",
+                        "inputs": {
+                          "cre00_document_name": "@{items('Apply_to_each')?['{FilenameWithExtension}']}",
+                          "cre00_document_path": "@{items('Apply_to_each')?['{FullPath}']}",
+                          "cre00_contactperson": "@{outputs('ID_で行を取得する(Users)')?['body/fullname']}",
+                          "cre00_document_type": "@{outputs('ID_で行を取得する(書類選択)')?['body/ca_name']}",
+                          "cre00_import_id": "@{items('Apply_to_each')?['{Identifier}']}",
+                          "cre00_document_url": "@{items('Apply_to_each')?['{Link}']}",
+                          "cre00_document_selectionid": "@{triggerBody()?['text']}",
+                          "cre00_document_id": "@{outputs('ID_で行を取得する(書類選択)')?['body/ca_document_id']}",
+                          "cre00_userid": "@{triggerBody()?['text_1']}",
+                          "cre00_aiconfig": "@{outputs('ID_で行を取得する(書類選択)')?['body/_ca_aiconfig_value']}"
+                        },
+                        "runAfter": {
+                          "ID_で行を取得する(Users)": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "4b56786d-89f1-479f-977d-0077e47f0f35"
+                        }
+                      },
+                      "インポート管理テーブルに登録": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "@variables('管理テーブル')",
+                            "item": "@outputs('管理テーブルへの更新')"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "CreateRecord",
+                            "connectionName": "shared_commondataserviceforapps"
+                          }
+                        },
+                        "runAfter": {
+                          "管理テーブルへの更新": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "4361a3e9-abba-4abb-a314-448658255b66"
+                        }
+                      },
+                      "インポート管理テーブル行の更新(新規作成)": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "@variables('管理テーブル')",
+                            "recordId": "@outputs('インポート管理テーブルに登録')?['body/cre00_import_itemid']",
+                            "item": "@outputs('インポート管理テーブル登録用(新規作成)')"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "UpdateOnlyRecord",
+                            "connectionName": "shared_commondataserviceforapps"
+                          }
+                        },
+                        "runAfter": {
+                          "インポート管理テーブル登録用(新規作成)": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "c2482caa-4750-4d02-9ec6-24dd1d023a53"
+                        }
+                      },
+                      "インポート管理テーブル登録用(新規作成)": {
+                        "type": "Compose",
+                        "inputs": {
+                          "cre00_importstatus": "新規作成"
+                        },
+                        "runAfter": {
+                          "インポート管理テーブルに登録": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "1ef48ed3-a924-4f6f-adb9-6c83b9fadad2"
+                        }
+                      },
+                      "ID_で行を取得する(書類選択)": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "@variables('書類選択テーブル')",
+                            "recordId": "@triggerBody()?['text']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "GetItem",
+                            "connectionName": "shared_commondataserviceforapps"
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "6bc4ec25-b925-4105-8730-33b207a94bc4"
+                        }
+                      },
+                      "ID_で行を取得する(Users)": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "@variables('Userテーブル')",
+                            "recordId": "@triggerBody()?['text_1']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "GetItem",
+                            "connectionName": "shared_commondataserviceforapps"
+                          }
+                        },
+                        "runAfter": {
+                          "ID_で行を取得する(書類選択)": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "d5ae63ee-4af9-4ec9-a128-c53ec9a5afef"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "行を一覧にする(インポート済チェック)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "b32c4058-a7ea-49d7-a58b-c8f51dc77d50"
+                  }
+                }
+              },
+              "runAfter": {
+                "ファイルの取得_(プロパティのみ)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a873c95a-0de6-4fd8-a969-8a8d59a4518b"
+              }
+            },
+            "Power_App_またはフローに応答する(成功)": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "title": "Success",
+                      "x-ms-dynamically-added": true,
+                      "type": "boolean"
+                    },
+                    "importedfiles": {
+                      "title": "ImportedFiles",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "success": true,
+                  "importedfiles": "@{variables('インポート済ファイル')}"
+                }
+              },
+              "runAfter": {
+                "Apply_to_each": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "4b2c7408-8485-4417-ac8f-88c0e247fd7f"
+              }
+            }
+          },
+          "runAfter": {
+            "インポート済ファイルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "221bb3a9-98b9-4b72-be9b-2905a4c1130d"
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              },
+              "runAfter": {
+                "Power_App_またはフローに応答する(失敗)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5bf7946d-9421-48aa-be43-0498fe479c8f"
+              }
+            },
+            "ロールバック処理": {
+              "type": "Scope",
+              "actions": {
+                "行を一覧にする(ステータスがブランク)": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "@variables('管理テーブル')",
+                      "$filter": "cre00_importstatus eq null"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "482de9a7-c5c1-4bdc-bae4-da38296b8fa9"
+                  }
+                },
+                "ステータスがブランクを削除": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('行を一覧にする(ステータスがブランク)')?['body/value']",
+                  "actions": {
+                    "行を削除する(ステータスがブランク)": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@variables('管理テーブル')",
+                          "recordId": "@items('ステータスがブランクを削除')?['cre00_import_itemid']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "efbe0aae-be8b-4679-adcc-bbd27dc4adcf"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "行を一覧にする(ステータスがブランク)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f9c957d9-851a-47aa-b959-eca85196f29c"
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "5880c310-da90-4716-9e3d-38cf11f87271"
+              }
+            },
+            "通知処理": {
+              "type": "Scope",
+              "actions": {},
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "809dc330-deee-4281-90ba-9967fc9aed45"
+              }
+            },
+            "Power_App_またはフローに応答する(失敗)": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "title": "Success",
+                      "x-ms-dynamically-added": true,
+                      "type": "boolean"
+                    },
+                    "importedfiles": {
+                      "title": "ImportedFiles",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "success": false,
+                  "importedfiles": "@{variables('インポート済ファイル')}"
+                }
+              },
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f57e598e-6edd-4016-8ffa-1ee120e952c6"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2769c6e5-872f-434e-9677-7d91a29f1900"
+          }
+        },
+        "管理テーブルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "管理テーブル",
+                "type": "string",
+                "value": "cre00_import_items"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "c0c3a9b4-3525-40dd-819e-a09c237e07fa"
+          }
+        },
+        "書類選択テーブルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "書類選択テーブル",
+                "type": "string",
+                "value": "ca_document_selections"
+              }
+            ]
+          },
+          "runAfter": {
+            "管理テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "78394ab7-a243-47b5-946d-499622bf688b"
+          }
+        },
+        "Userテーブルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Userテーブル",
+                "type": "string",
+                "value": "systemusers"
+              }
+            ]
+          },
+          "runAfter": {
+            "書類選択テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4c1b858b-c036-42e4-8fff-9526c8ac1625"
+          }
+        },
+        "インポート済ファイルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "インポート済ファイル",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Userテーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1b4105c5-d081-42c4-b59e-12cb0a23307d"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

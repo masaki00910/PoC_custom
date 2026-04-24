@@ -1,0 +1,1101 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_7e256"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_excelonlinebusiness": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_90ce9"
+        },
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_commondataserviceforapps-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_teams": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "ca_sharedteams_3f17f"
+        },
+        "api": {
+          "name": "shared_teams"
+        }
+      },
+      "shared_excelonlinebusiness-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_90ce9"
+        },
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "ファイルが作成または変更されたとき_(プロパティのみ)": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Minute"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "51e37add-55e3-4672-ba60-9be2c2a1a859"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://stellar2026.sharepoint.com/sites/A_test",
+              "table": "ea144458-d381-430d-90bc-7c0d21e8b084",
+              "folderPath": "/Shared Documents/01_test/01_エラーリスト格納先"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetOnUpdatedFileItems",
+              "connectionName": "shared_sharepointonline"
+            }
+          }
+        }
+      },
+      "actions": {
+        "変数の初期化：varFolderName": {
+          "runAfter": {
+            "ファイルの作成": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0c09b9ba-318c-4d7c-81d6-28b577fe86e7"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFolderName",
+                "type": "string",
+                "value": "@split(triggerOutputs()?['body/{Path}'], '/')[3]"
+              }
+            ]
+          }
+        },
+        "Try": {
+          "actions": {
+            "テーブルの取得": {
+              "runAfter": {
+                "SharePoint_ライブラリからスクリプトを実行する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "07713055-e751-4799-99df-d436feee83a9",
+                "tableId": null
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "source": "sites/stellar2026.sharepoint.com,6bfa616e-e14b-4016-9f1b-df3f2e2885ce,1b79a536-50a0-4eb8-9447-6acb423c2b67",
+                  "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                  "file": "@outputs('ファイルの作成')?['body/Id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                  "operationId": "GetTables",
+                  "connectionName": "shared_excelonlinebusiness"
+                }
+              }
+            },
+            "Loop：エラーリストExcelのテーブル": {
+              "foreach": "@outputs('テーブルの取得')?['body/value']",
+              "actions": {
+                "表内に存在する行を一覧表示": {
+                  "metadata": {
+                    "operationMetadataId": "a564e004-f421-46ac-b8c3-4535669e6770",
+                    "tableId": "@items('Loop：エラーリストExcelのテーブル')?['name']"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "source": "sites/stellar2026.sharepoint.com,6bfa616e-e14b-4016-9f1b-df3f2e2885ce,1b79a536-50a0-4eb8-9447-6acb423c2b67",
+                      "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                      "file": "@outputs('ファイルの作成')?['body']?['Id']",
+                      "table": "@items('Loop：エラーリストExcelのテーブル')?['name']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                      "operationId": "GetItems",
+                      "connectionName": "shared_excelonlinebusiness"
+                    }
+                  }
+                },
+                "Loop：エラーリストExcelのレコード": {
+                  "foreach": "@outputs('表内に存在する行を一覧表示')?['body/value']",
+                  "actions": {
+                    "Try_個別処理": {
+                      "actions": {
+                        "変数の設定：varPolicyNumber": {
+                          "runAfter": {
+                            "変数のリセット：varErrorNameList": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "918bda7c-bef1-4c62-b280-1d4dfbe17e0f"
+                          },
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "varPolicyNumber",
+                            "value": "@items('Loop：エラーリストExcelのレコード')?['証券番号']"
+                          }
+                        },
+                        "行を一覧にする：エラーリスト管理": {
+                          "runAfter": {
+                            "変数の設定：varPolicyNumber": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "03a72344-0ded-4f90-b2eb-4403aa6dbcd5"
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "ca_document_imports",
+                              "$filter": "ca_policy_number eq '@{variables('varPolicyNumber')}' and ca_error_type eq '@{variables('varFolderName')}'"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          }
+                        },
+                        "インポート済み？": {
+                          "actions": {},
+                          "runAfter": {
+                            "行を一覧にする：エラーリスト管理": [
+                              "Succeeded"
+                            ]
+                          },
+                          "else": {
+                            "actions": {
+                              "行追加：エラーリスト管理": {
+                                "runAfter": {
+                                  "各エラーリスト取込": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "438efe67-1304-4ec8-a653-aa21390560be"
+                                },
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "ca_document_imports",
+                                    "item/ca_error_type": "@variables('varFolderName')",
+                                    "item/ca_status_updated_datetime": "@body('現在の時刻')",
+                                    "item/ca_is_degimo": false,
+                                    "item/ca_batch_number": "@items('Loop：エラーリストExcelのレコード')?['バッチ番号']",
+                                    "item/ca_main_document_url": "@body('画像情報取得')?['vermaindocument']",
+                                    "item/ca_reportstatus": 1,
+                                    "item/ca_vouchertype": 1,
+                                    "item/ca_policy_number": "@items('Loop：エラーリストExcelのレコード')?['証券番号']",
+                                    "item/ca_sub_document_url": "@body('画像情報取得')?['versubdocuments']",
+                                    "item/ca_processing_status": "データ取り込み",
+                                    "item/ca_from_name": "@triggerBody()?['{FilenameWithExtension}']",
+                                    "item/ca_import_date": "@body('現在の時刻')",
+                                    "item/ca_document_url": "@body('画像情報取得')?['versharepointpath']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "operationId": "CreateRecord",
+                                    "connectionName": "shared_commondataserviceforapps"
+                                  }
+                                }
+                              },
+                              "現在の時刻": {
+                                "metadata": {
+                                  "operationMetadataId": "acefa722-533f-45ea-9a08-5cb63f5b936b"
+                                },
+                                "type": "Expression",
+                                "kind": "CurrentTime",
+                                "inputs": {}
+                              },
+                              "各エラーリスト取込": {
+                                "actions": {
+                                  "スイッチ：業務ごとに分岐": {
+                                    "cases": {
+                                      "Case：漢字": {
+                                        "case": "漢字",
+                                        "actions": {
+                                          "行追加：漢字エラーリスト": {
+                                            "metadata": {
+                                              "operationMetadataId": "4c6e3865-0bdc-40cf-b694-4372a6b3aea9"
+                                            },
+                                            "type": "OpenApiConnection",
+                                            "inputs": {
+                                              "parameters": {
+                                                "entityName": "new_a_kanji_error_lists",
+                                                "item/new_a_batch_number": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['バッチ番号']), ''))}\n",
+                                                "item/new_a_policy_number": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['証券番号']), ''))}\n",
+                                                "item/new_a_apl_status": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['ＡＰＬステータス']), ''))}\n",
+                                                "item/new_a_pol_status": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['ＰＯＬ登録予約ステータス']), ''))}\n",
+                                                "item/new_a_ltcpr_beneficiary_1_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['介護年金受取人名（漢字）１']), ''))}\n",
+                                                "item/new_a_ltcpr_beneficiary_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['介護年金受取人名（漢字）２']), ''))}\n",
+                                                "item/new_a_ltcpr_beneficiary_1_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['介護年金特約受取人１_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_ltcpr_beneficiary_1_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['介護年金特約受取人１_x002e_カナ']), ''))}\n",
+                                                "item/new_a_ltcpr_beneficiary_2_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['介護年金特約受取人２_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_ltcpr_beneficiary_2_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['介護年金特約受取人２_x002e_カナ']), ''))}\n",
+                                                "item/new_a_agency_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['代理店コード']), ''))}\n",
+                                                "item/new_a_beneficiary_1_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名１_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_beneficiary_1_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名１_x002e_カナ']), ''))}\n",
+                                                "item/new_a_beneficiary_2_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名２_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_beneficiary_2_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名２_x002e_カナ']), ''))}\n",
+                                                "item/new_a_beneficiary_3_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名３_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_beneficiary_3_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名３_x002e_カナ']), ''))}\n",
+                                                "item/new_a_beneficiary_4_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名４_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_beneficiary_4_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人名４_x002e_カナ']), ''))}\n",
+                                                "item/new_a_beneficiary_1_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）１']), ''))}\n",
+                                                "item/new_a_beneficiary_1_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）１－２']), ''))}\n",
+                                                "item/new_a_beneficiary_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）２']), ''))}\n",
+                                                "item/new_a_beneficiary_2_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）２－２']), ''))}\n",
+                                                "item/new_a_beneficiary_3_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）３']), ''))}\n",
+                                                "item/new_a_beneficiary_3_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）３－２']), ''))}\n",
+                                                "item/new_a_beneficiary_4_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）４']), ''))}\n",
+                                                "item/new_a_beneficiary_4_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['受取人氏名（漢字）４－２']), ''))}\n",
+                                                "item/new_a_policyholder_name_kana": "@trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['契約者名']), ''))",
+                                                "item/new_a_policyholder_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['契約者名（漢字）']), ''))}\n",
+                                                "item/new_a_policyholder_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['契約者名_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_child1_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名１_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_child1_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名１_x002e_カナ']), ''))}\n",
+                                                "item/new_a_child2_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名２_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_child2_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名２_x002e_カナ']), ''))}\n",
+                                                "item/new_a_child3_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名３_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_child3_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名３_x002e_カナ']), ''))}\n",
+                                                "item/new_a_child4_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名４_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_child4_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供名４_x002e_カナ']), ''))}\n",
+                                                "item/new_a_child1_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供氏名（漢字）１']), ''))}\n",
+                                                "item/new_a_child2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供氏名（漢字）２']), ''))}\n",
+                                                "item/new_a_child3_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供氏名（漢字）３']), ''))}\n",
+                                                "item/new_a_child4_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['子供氏名（漢字）４']), ''))}\n",
+                                                "item/new_a_document_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['帳票コード']), ''))}\n",
+                                                "item/new_a_claim_agent_1_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['指定代理請求人１_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_claim_agent_1_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['指定代理請求人１_x002e_カナ']), ''))}\n",
+                                                "item/new_a_claim_agent_2_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['指定代理請求人２_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_claim_agent_2_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['指定代理請求人２_x002e_カナ']), ''))}\n",
+                                                "item/new_a_claim_agent_1_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['指定代理請求人名（漢字）１']), ''))}\n",
+                                                "item/new_a_claim_agent_2_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['指定代理請求人名（漢字）２']), ''))}\n",
+                                                "item/new_a_underwriting_required_mark": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['有診査マーク']), ''))}\n",
+                                                "item/new_a_application_entry_date": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['申込書入力日・年月日']), ''))}\n",
+                                                "item/new_a_insured_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['被保険者名_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_insured_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['被保険者名_x002e_カナ']), ''))}\n",
+                                                "item/new_a_insured_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['被保険者氏名（漢字）']), ''))}\n",
+                                                "item/new_a_branch_office": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['課支社']), ''))}\n",
+                                                "item/new_a_pre_conversion_policy_number": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['転換前証券番号']), ''))}\n",
+                                                "item/new_a_spouse_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['配偶者名_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_spouse_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['配偶者名_x002e_カナ']), ''))}\n",
+                                                "item/new_a_spouse_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['配偶者氏名（漢字）']), ''))}\n",
+                                                "item/new_a_excluded_person_error_flag": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['除外者名１_x002e_エラーフラグ']), ''))}\n",
+                                                "item/new_a_excluded_person_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['除外者名１_x002e_カナ']), ''))}\n",
+                                                "item/new_a_excluded_person_name_kanji": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['除外者氏名（漢字）１除外者名２_x002e_エラーフラグ 除外者名２_x002e_カナ 除外者氏名（漢字）２']), ''))}\n",
+                                                "item/new_a_group": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['集団']), ''))}\n"
+                                              },
+                                              "host": {
+                                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                "operationId": "CreateRecord",
+                                                "connectionName": "shared_commondataserviceforapps"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "Case：住所": {
+                                        "case": "住所",
+                                        "actions": {
+                                          "行追加：住所エラーリスト": {
+                                            "type": "OpenApiConnection",
+                                            "inputs": {
+                                              "parameters": {
+                                                "entityName": "new_a_address_error_lists",
+                                                "item/new_a_msg": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['MSG']), ''))}\n",
+                                                "item/new_a_batch_number": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['バッチ番号']), ''))}\n",
+                                                "item/new_a_policy_number": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['証券番号']), ''))}\n",
+                                                "item/new_a_sts": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['STS']), ''))}\n",
+                                                "item/new_a_agency_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['代理店コード']), ''))}\n",
+                                                "item/new_a_policyholder_postal_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['契〒']), ''))}\n",
+                                                "item/new_a_policyholder_address_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['契住所']), ''))}\n",
+                                                "item/new_a_policyholder_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['契約者名']), ''))}\n",
+                                                "item/new_a_document_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['帳票コード']), ''))}\n",
+                                                "item/new_a_insured_name_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['第一被名']), ''))}\n",
+                                                "item/new_a_insured_postal_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['被〒']), ''))}\n",
+                                                "item/new_a_insured_address_kana": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['被住所']), ''))}\n",
+                                                "item/new_a_group_code": "@{trim(coalesce(string(items('Loop：エラーリストExcelのレコード')?['集団コード']), ''))}\n"
+                                              },
+                                              "host": {
+                                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                "operationId": "CreateRecord",
+                                                "connectionName": "shared_commondataserviceforapps-1"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "default": {
+                                      "actions": {}
+                                    },
+                                    "expression": "@variables('varFolderName')",
+                                    "metadata": {
+                                      "operationMetadataId": "ad10d05c-4287-467b-8fca-c64b98c49203"
+                                    },
+                                    "type": "Switch"
+                                  }
+                                },
+                                "runAfter": {
+                                  "画像情報取得": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "f19ef8df-81e0-4c62-843c-25fa706215d4"
+                                },
+                                "type": "Scope"
+                              },
+                              "詳細データ取込": {
+                                "actions": {
+                                  "Loop：取込項目": {
+                                    "foreach": "@outputs('行を一覧にする：エラーリスト項目マスタ')?['body/value']",
+                                    "actions": {
+                                      "項目名": {
+                                        "runAfter": {
+                                          "変数のリセット：isErrorFlag": [
+                                            "Succeeded"
+                                          ]
+                                        },
+                                        "metadata": {
+                                          "operationMetadataId": "e4bdcf8e-1966-4204-a0ef-bc322673a329"
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@items('Loop：取込項目')?['ca_field_name']"
+                                      },
+                                      "変数のリセット：isErrorFlag": {
+                                        "metadata": {
+                                          "operationMetadataId": "736561d0-6e04-4410-a9d9-e63b384c533a"
+                                        },
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                          "name": "isErrorFlag",
+                                          "value": false
+                                        }
+                                      },
+                                      "エンコード済み項目名": {
+                                        "runAfter": {
+                                          "項目名": [
+                                            "Succeeded"
+                                          ]
+                                        },
+                                        "metadata": {
+                                          "operationMetadataId": "19139b6d-a162-449e-a7fe-fd1dbdfc7b7f"
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@replace(replace(replace(replace(outputs('項目名'), '.', '_x002e_'), '@', '_x0040_'), ':', '_x003a_'), '#', '_x0023_')"
+                                      },
+                                      "作成：Excelから項目値取得": {
+                                        "runAfter": {
+                                          "エンコード済み項目名": [
+                                            "Succeeded"
+                                          ]
+                                        },
+                                        "metadata": {
+                                          "operationMetadataId": "1957693d-23b0-4d22-8844-f6cf66f9b6ea"
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@coalesce(\r\n  trim(string(items('Loop：エラーリストExcelのレコード')?[outputs('エンコード済み項目名')])),\r\n  ''\r\n)\r\n"
+                                      },
+                                      "値に「*」が含まれているか": {
+                                        "actions": {
+                                          "変数の設定：isErrorFlag": {
+                                            "metadata": {
+                                              "operationMetadataId": "290cd7c0-9114-4db0-a1cf-66f3cfae360b"
+                                            },
+                                            "type": "SetVariable",
+                                            "inputs": {
+                                              "name": "isErrorFlag",
+                                              "value": true
+                                            }
+                                          }
+                                        },
+                                        "runAfter": {
+                                          "作成：Excelから項目値取得": [
+                                            "Succeeded"
+                                          ]
+                                        },
+                                        "else": {
+                                          "actions": {}
+                                        },
+                                        "expression": {
+                                          "and": [
+                                            {
+                                              "contains": [
+                                                "@coalesce(outputs('作成：Excelから項目値取得'),'')",
+                                                "*"
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "metadata": {
+                                          "operationMetadataId": "bf7d6fc2-c792-43e3-b78e-2f8b60e13767"
+                                        },
+                                        "type": "If"
+                                      },
+                                      "マッピング対象か": {
+                                        "actions": {
+                                          "行追加：詳細データ管理（マッピング対象）": {
+                                            "metadata": {
+                                              "operationMetadataId": "cae55160-50ce-4678-b472-d3c5974b5dd3"
+                                            },
+                                            "type": "OpenApiConnection",
+                                            "inputs": {
+                                              "parameters": {
+                                                "entityName": "ca_document_items",
+                                                "item/ca_error_flag": true,
+                                                "item/ca_status_updated_datetime": "@body('現在の時刻')",
+                                                "item/ca_policy_number": "@variables('varPolicyNumber')",
+                                                "item/ca_ai_inspection_status": 0,
+                                                "item/ca_document_id@odata.bind": "@outputs('行追加：エラーリスト管理')?['body/@odata.id']",
+                                                "item/ca_field_id@odata.bind": " @{items('Loop：取込項目')?['@odata.id']}",
+                                                "item/ca_document_value": "@outputs('作成：Excelから項目値取得')"
+                                              },
+                                              "host": {
+                                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                "operationId": "CreateRecord",
+                                                "connectionName": "shared_commondataserviceforapps"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "runAfter": {
+                                          "値に「*」が含まれているか": [
+                                            "Succeeded"
+                                          ]
+                                        },
+                                        "else": {
+                                          "actions": {
+                                            "行追加：詳細データ管理（マッピング対象外）": {
+                                              "metadata": {
+                                                "operationMetadataId": "cae55160-50ce-4678-b472-d3c5974b5dd3"
+                                              },
+                                              "type": "OpenApiConnection",
+                                              "inputs": {
+                                                "parameters": {
+                                                  "entityName": "ca_document_items",
+                                                  "item/ca_error_flag": "@variables('isErrorFlag')",
+                                                  "item/ca_status_updated_datetime": "@body('現在の時刻')",
+                                                  "item/ca_policy_number": "@variables('varPolicyNumber')",
+                                                  "item/ca_ai_inspection_status": 0,
+                                                  "item/ca_document_id@odata.bind": "@outputs('行追加：エラーリスト管理')?['body/@odata.id']",
+                                                  "item/ca_field_id@odata.bind": " @{items('Loop：取込項目')?['@odata.id']}",
+                                                  "item/ca_document_value": "@outputs('作成：Excelから項目値取得')"
+                                                },
+                                                "host": {
+                                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                  "operationId": "CreateRecord",
+                                                  "connectionName": "shared_commondataserviceforapps"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "expression": {
+                                          "and": [
+                                            {
+                                              "contains": [
+                                                "@variables('varErrorNameList')",
+                                                "@items('Loop：取込項目')?['ca_field_name']"
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "type": "If"
+                                      }
+                                    },
+                                    "runAfter": {
+                                      "マッピング対象のエラーチェック": [
+                                        "Succeeded"
+                                      ]
+                                    },
+                                    "metadata": {
+                                      "operationMetadataId": "96d5b73d-bcfc-4589-9eed-b86c88535b22"
+                                    },
+                                    "type": "Foreach",
+                                    "runtimeConfiguration": {
+                                      "concurrency": {
+                                        "repetitions": 40
+                                      }
+                                    }
+                                  },
+                                  "マッピング対象のエラーチェック": {
+                                    "foreach": "@variables('varEncodedMapping')",
+                                    "actions": {
+                                      "検索条件合致＆値に「*」が含まれている": {
+                                        "actions": {
+                                          "配列変数に追加：varErrorNameList": {
+                                            "type": "AppendToArrayVariable",
+                                            "inputs": {
+                                              "name": "varErrorNameList",
+                                              "value": "@items('マッピング対象のエラーチェック')?['name']"
+                                            }
+                                          }
+                                        },
+                                        "else": {
+                                          "actions": {}
+                                        },
+                                        "expression": {
+                                          "and": [
+                                            {
+                                              "contains": [
+                                                "@string(coalesce(items('Loop：エラーリストExcelのレコード')?[items('マッピング対象のエラーチェック')?['errorFlag']], ''))",
+                                                "*"
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "type": "If"
+                                      }
+                                    },
+                                    "runAfter": {
+                                      "行を一覧にする：エラーリスト項目マスタ": [
+                                        "Succeeded"
+                                      ]
+                                    },
+                                    "type": "Foreach"
+                                  },
+                                  "行を一覧にする：エラーリスト項目マスタ": {
+                                    "metadata": {
+                                      "operationMetadataId": "61b74526-1acd-44d7-9882-8dc71b2b8436"
+                                    },
+                                    "type": "OpenApiConnection",
+                                    "inputs": {
+                                      "parameters": {
+                                        "entityName": "ca_error_list_item_masters",
+                                        "$select": "ca_field_id, ca_field_name",
+                                        "$filter": "ca_error_type eq '@{variables('varFolderName')}'"
+                                      },
+                                      "host": {
+                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                        "operationId": "ListRecords",
+                                        "connectionName": "shared_commondataserviceforapps"
+                                      }
+                                    }
+                                  }
+                                },
+                                "runAfter": {
+                                  "行追加：エラーリスト管理": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "bf3ea80d-101a-4d94-940b-6e0c0b9bd75a"
+                                },
+                                "type": "Scope"
+                              },
+                              "画像情報取得": {
+                                "runAfter": {
+                                  "現在の時刻": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "a122713a-1ddd-4e76-8f8d-29cfe39ca93f"
+                                },
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflowReferenceName": "cc44bcbd-6ef6-f011-8406-002248ef7586"
+                                  },
+                                  "body": {
+                                    "text": "@variables('varPolicyNumber')"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "expression": {
+                            "and": [
+                              {
+                                "greaterOrEquals": [
+                                  "@length(outputs('行を一覧にする：エラーリスト管理')?['body/value'])",
+                                  1
+                                ]
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "250a930d-854b-463c-9666-e0807f854497"
+                          },
+                          "type": "If"
+                        },
+                        "変数のリセット：varErrorNameList": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "varErrorNameList",
+                            "value": []
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "8cf9e5af-19cb-40b3-afaf-35979878bfa9"
+                      },
+                      "type": "Scope"
+                    },
+                    "Catch_個別処理": {
+                      "actions": {
+                        "個別通知処理": {
+                          "actions": {
+                            "異常終了の通知をチャットまたはチャネルでメッセージを投稿する": {
+                              "metadata": {
+                                "operationMetadataId": "6472b775-be2e-490a-b7b0-527985e9ced4"
+                              },
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "poster": "Flow bot",
+                                  "location": "Channel",
+                                  "body/recipient/groupId": "c947730d-4bc1-4be3-aafd-7a5914f08799",
+                                  "body/recipient/channelId": "19:NFzljaVrj6LBHQM0QdTEZ0Ccfm2o6rTpwxUFmLGtP5I1@thread.tacv2",
+                                  "body/messageBody": "<p class=\"editor-paragraph\">エラーリストの取り込みでエラーが発生しました。<br><br>【異常発生箇所】</p><p class=\"editor-paragraph\">ファイル名：@{triggerBody()?['{FilenameWithExtension}']}<br>証券番号：@{variables('varPolicyNumber')}</p><p class=\"editor-paragraph\">失敗したアクション：@{result('Try_個別処理')?[0]?['name']}</p><p class=\"editor-paragraph\">エラーメッセージ：@{result('Try_個別処理')?[0]?['error']?['message']}</p><p class=\"editor-paragraph\">エラーコード：@{result('Try_個別処理')?[0]?['error']?['code']}<br>&lt;完全なエラー情報&gt;</p><p class=\"editor-paragraph\">@{result('Try_個別処理')}</p>"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                                  "operationId": "PostMessageToConversation",
+                                  "connectionName": "shared_teams"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "ロールバック処理の実行": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "889e6eb2-7252-40af-a78f-92a2117ecb4c"
+                          },
+                          "type": "Scope"
+                        },
+                        "ロールバック処理の実行": {
+                          "metadata": {
+                            "operationMetadataId": "0d333458-3b29-4952-b0c1-151e39055c2b"
+                          },
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "6c88ed19-6bf6-f011-8406-002248ef7586"
+                            },
+                            "body": {
+                              "text": "@variables('varPolicyNumber')",
+                              "text_1": "@variables('varFolderName')"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Try_個別処理": [
+                          "TimedOut",
+                          "Skipped",
+                          "Failed"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3cb2aa8f-8b54-4517-aec0-c9fdae0c2213"
+                      },
+                      "type": "Scope"
+                    }
+                  },
+                  "runAfter": {
+                    "表内に存在する行を一覧表示": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "9330dc7b-80aa-4215-82b5-7e9aac0f58b2"
+                  },
+                  "type": "Foreach",
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 20
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "テーブルの取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c7df0868-75e4-4ff1-8a30-bc1d3b07a3a6"
+              },
+              "type": "Foreach"
+            },
+            "SharePoint_ライブラリからスクリプトを実行する": {
+              "runAfter": {
+                "マッピング対象項目リストの作成": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "01S6JYSXMVRWDCGD3HHRAL6XY45W52CYEH": "/01_test/テーブル化.osts",
+                "tableId": null,
+                "operationMetadataId": "cb0abe5c-2a11-4fc8-8485-9986db814f56"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "source": "sites/stellar2026.sharepoint.com,6bfa616e-e14b-4016-9f1b-df3f2e2885ce,1b79a536-50a0-4eb8-9447-6acb423c2b67",
+                  "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                  "file": "@outputs('ファイルの作成')?['body/Id']",
+                  "scriptSource": "sites/stellar2026.sharepoint.com,6bfa616e-e14b-4016-9f1b-df3f2e2885ce,1b79a536-50a0-4eb8-9447-6acb423c2b67",
+                  "scriptDrive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                  "scriptId": "01S6JYSXMVRWDCGD3HHRAL6XY45W52CYEH"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                  "operationId": "RunScriptProdV2",
+                  "connectionName": "shared_excelonlinebusiness-1"
+                }
+              }
+            },
+            "マッピング対象項目リストの作成": {
+              "foreach": "@variables('varMapping')",
+              "actions": {
+                "配列変数に追加：varMappedColumns-errorFlag": {
+                  "runAfter": {
+                    "配列変数に追加：varEncodedMapping": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varMappedColumns",
+                    "value": "@replace(replace(replace(replace(items('マッピング対象項目リストの作成')?['errorFlag'], '.', '_x002e_'), '@', '_x0040_'), ':', '_x003a_'), '#', '_x0023_')"
+                  }
+                },
+                "配列変数に追加：varMappedColumns-name": {
+                  "runAfter": {
+                    "配列変数に追加：varMappedColumns-errorFlag": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varMappedColumns",
+                    "value": "@replace(replace(replace(replace(items('マッピング対象項目リストの作成')?['name'], '.', '_x002e_'), '@', '_x0040_'), ':', '_x003a_'), '#', '_x0023_')"
+                  }
+                },
+                "配列変数に追加：varEncodedMapping": {
+                  "runAfter": {
+                    "エンコード済みオブジェクト作成": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varEncodedMapping",
+                    "value": "@outputs('エンコード済みオブジェクト作成')"
+                  }
+                },
+                "エンコード済みオブジェクト作成": {
+                  "type": "Compose",
+                  "inputs": {
+                    "errorFlag": "@{replace(replace(replace(replace(items('マッピング対象項目リストの作成')?['errorFlag'], '.', '_x002e_'), '@', '_x0040_'), ':', '_x003a_'), '#', '_x0023_')}",
+                    "name": "@{replace(replace(replace(replace(items('マッピング対象項目リストの作成')?['name'], '.', '_x002e_'), '@', '_x0040_'), ':', '_x003a_'), '#', '_x0023_')}"
+                  }
+                }
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "変数の初期化：varErrorNameList": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "46d8af85-6eab-407c-94d6-f218000b2d3e"
+          },
+          "type": "Scope"
+        },
+        "Catch": {
+          "actions": {
+            "通知処理": {
+              "actions": {
+                "異常終了の通知をチャットまたはチャネルでメッセージを投稿する_1": {
+                  "metadata": {
+                    "operationMetadataId": "6472b775-be2e-490a-b7b0-527985e9ced4"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Channel",
+                      "body/recipient/groupId": "c947730d-4bc1-4be3-aafd-7a5914f08799",
+                      "body/recipient/channelId": "19:NFzljaVrj6LBHQM0QdTEZ0Ccfm2o6rTpwxUFmLGtP5I1@thread.tacv2",
+                      "body/messageBody": "<p class=\"editor-paragraph\">エラーリストの取り込みでエラーが発生しました。<br><br>【異常発生箇所】</p><p class=\"editor-paragraph\">■ファイル名</p><p class=\"editor-paragraph\"></p><br><p class=\"editor-paragraph\">■アクション履歴</p><br><p class=\"editor-paragraph\">@{outputs('アクションの実行履歴の取得')}</p>"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "connectionName": "shared_teams"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "アクションの実行履歴の取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9cea5626-b94b-42cb-8c07-b67c84ee1f02"
+              },
+              "type": "Scope"
+            },
+            "異常終了": {
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "be212f2a-c4ff-47bb-9b15-223b2d8085ff"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            },
+            "アクションの実行履歴の取得": {
+              "metadata": {
+                "operationMetadataId": "4a8eb5a2-072b-4c1f-a063-d244adbd8980"
+              },
+              "type": "Compose",
+              "inputs": "@result('Try')"
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0d6cca6d-e8a0-4792-b4d8-7429bb2ce647"
+          },
+          "type": "Scope"
+        },
+        "変数の初期化：varPolicyNumber": {
+          "runAfter": {
+            "変数の初期化：varFolderName": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "163aea90-2ecf-465e-affe-d6c0e510909e"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPolicyNumber",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "変数の初期化：isErrorFlag": {
+          "runAfter": {
+            "変数の初期化：varPolicyNumber": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "86a77c86-f512-478d-95cc-344c07be095f"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "isErrorFlag",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          }
+        },
+        "ファイル_コンテンツの取得": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a2aa3342-6c9f-475a-8ab9-9a3ddabf403f"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://stellar2026.sharepoint.com/sites/A_test",
+              "id": "@triggerBody()?['{Identifier}']",
+              "inferContentType": true
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetFileContent",
+              "connectionName": "shared_sharepointonline"
+            }
+          }
+        },
+        "ファイルの作成": {
+          "runAfter": {
+            "ファイル_コンテンツの取得": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d04dece5-7842-494e-afe1-b7362834a060"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://stellar2026.sharepoint.com/sites/A_test",
+              "folderPath": "/Shared Documents/01_test/02_取込済みエラーリスト格納先",
+              "name": "@{split(triggerOutputs()?['body/{Path}'], '/')[3]}エラーリスト_@{utcNow()}.xlsx",
+              "body": "@body('ファイル_コンテンツの取得')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "CreateFile",
+              "connectionName": "shared_sharepointonline"
+            }
+          },
+          "runtimeConfiguration": {
+            "contentTransfer": {
+              "transferMode": "Chunked"
+            }
+          }
+        },
+        "変数の初期化：varMapping": {
+          "runAfter": {
+            "変数の初期化：isErrorFlag": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varMapping",
+                "type": "array",
+                "value": [
+                  {
+                    "errorFlag": "契約者名.エラーフラグ",
+                    "name": "契約者名（漢字）"
+                  },
+                  {
+                    "errorFlag": "被保険者名.エラーフラグ",
+                    "name": "被保険者氏名（漢字）"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "変数の初期化：varMappedColumns": {
+          "runAfter": {
+            "変数の初期化：varEncodedMapping": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varMappedColumns",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "変数の初期化：varErrorNameList": {
+          "runAfter": {
+            "変数の初期化：varMappedColumns": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorNameList",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "変数の初期化：varEncodedMapping": {
+          "runAfter": {
+            "変数の初期化：varMapping": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varEncodedMapping",
+                "type": "array"
+              }
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

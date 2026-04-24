@@ -1,0 +1,433 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "0756eefc-0056-4bfc-9a99-31a93cfa82a1"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "証券番号",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "エラー種別",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "actions": {
+            "ロールバック処理": {
+              "actions": {
+                "対象を一覧にする：エラーリスト管理": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "ca_document_imports",
+                      "$select": "ca_policy_number",
+                      "$filter": "ca_policy_number eq '@{triggerBody()?['text']}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                },
+                "エラーリスト管理にレコードが存在するか？": {
+                  "actions": {
+                    "For_each": {
+                      "foreach": "@outputs('対象を一覧にする：エラーリスト管理')?['body/value']",
+                      "actions": {
+                        "対象を削除：エラーリスト管理": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "ca_document_imports",
+                              "recordId": "@item()?['ca_document_importid']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "DeleteRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          }
+                        }
+                      },
+                      "type": "Foreach"
+                    },
+                    "対象を一覧にする：詳細データ管理": {
+                      "runAfter": {
+                        "スイッチ": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "ca_document_items",
+                          "$filter": "ca_policy_number eq '@{triggerBody()?['text']}'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      }
+                    },
+                    "詳細データ管理にレコードが存在するか？": {
+                      "actions": {
+                        "For_each_1": {
+                          "foreach": "@outputs('対象を一覧にする：詳細データ管理')?['body/value']",
+                          "actions": {
+                            "対象を削除：詳細データ管理": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "ca_document_items",
+                                  "recordId": "@item()?['ca_document_itemid']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "DeleteRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              }
+                            }
+                          },
+                          "type": "Foreach"
+                        }
+                      },
+                      "runAfter": {
+                        "対象を一覧にする：詳細データ管理": [
+                          "Succeeded"
+                        ]
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "not": {
+                              "equals": [
+                                "@length(outputs('対象を一覧にする：詳細データ管理')?['body/value'])",
+                                0
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    },
+                    "スイッチ": {
+                      "runAfter": {
+                        "For_each": [
+                          "Succeeded"
+                        ]
+                      },
+                      "cases": {
+                        "漢字エラーリスト": {
+                          "case": "漢字",
+                          "actions": {
+                            "対象を一覧にする：漢字エラーリスト": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "new_a_kanji_error_lists",
+                                  "$filter": "new_a_policy_number eq '@{triggerBody()?['text']}'"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "ListRecords",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              }
+                            },
+                            "漢字エラーリストにレコードが存在するか？": {
+                              "actions": {
+                                "For_each_2": {
+                                  "foreach": "@outputs('対象を一覧にする：漢字エラーリスト')?['body/value']",
+                                  "actions": {
+                                    "対象を削除：漢字エラーリスト": {
+                                      "type": "OpenApiConnection",
+                                      "inputs": {
+                                        "parameters": {
+                                          "entityName": "new_a_kanji_error_lists",
+                                          "recordId": "@item()?['new_a_kanji_error_listid']"
+                                        },
+                                        "host": {
+                                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                          "operationId": "DeleteRecord",
+                                          "connectionName": "shared_commondataserviceforapps"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "type": "Foreach"
+                                }
+                              },
+                              "runAfter": {
+                                "対象を一覧にする：漢字エラーリスト": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "else": {
+                                "actions": {}
+                              },
+                              "expression": {
+                                "and": [
+                                  {
+                                    "not": {
+                                      "equals": [
+                                        "@length(outputs('対象を一覧にする：漢字エラーリスト')?['body/value'])",
+                                        0
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              "type": "If"
+                            }
+                          }
+                        },
+                        "住所エラーリスト": {
+                          "case": "住所",
+                          "actions": {
+                            "対象を一覧にする：住所エラーリスト": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "new_a_address_error_lists",
+                                  "$filter": "new_a_policy_number eq '@{triggerBody()?['text']}'"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "ListRecords",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              }
+                            },
+                            "住所エラーリストにレコードが存在するか？": {
+                              "actions": {
+                                "For_each_3": {
+                                  "foreach": "@outputs('対象を一覧にする：住所エラーリスト')?['body/value']",
+                                  "actions": {
+                                    "対象を削除：住所エラーリスト": {
+                                      "type": "OpenApiConnection",
+                                      "inputs": {
+                                        "parameters": {
+                                          "entityName": "new_a_address_error_lists",
+                                          "recordId": "@item()?['new_a_address_error_listid']"
+                                        },
+                                        "host": {
+                                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                          "operationId": "DeleteRecord",
+                                          "connectionName": "shared_commondataserviceforapps"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "type": "Foreach"
+                                }
+                              },
+                              "runAfter": {
+                                "対象を一覧にする：住所エラーリスト": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "else": {
+                                "actions": {}
+                              },
+                              "expression": {
+                                "and": [
+                                  {
+                                    "not": {
+                                      "equals": [
+                                        "@length(outputs('対象を一覧にする：住所エラーリスト')?['body/value'])",
+                                        0
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              "type": "If"
+                            }
+                          }
+                        }
+                      },
+                      "default": {
+                        "actions": {}
+                      },
+                      "expression": "@triggerBody()?['text_1']",
+                      "type": "Switch"
+                    }
+                  },
+                  "runAfter": {
+                    "対象を一覧にする：エラーリスト管理": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@length(outputs('対象を一覧にする：エラーリスト管理')?['body/value'])",
+                            0
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "type": "Scope"
+            },
+            "正常終了を通知": {
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Success"
+                }
+              }
+            }
+          },
+          "runAfter": {},
+          "type": "Scope"
+        },
+        "Catch": {
+          "actions": {
+            "異常終了を通知": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed",
+                  "errorresult": "@{result('Try')}"
+                }
+              }
+            },
+            "終了": {
+              "runAfter": {
+                "異常終了を通知": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "Skipped",
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "type": "Scope"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

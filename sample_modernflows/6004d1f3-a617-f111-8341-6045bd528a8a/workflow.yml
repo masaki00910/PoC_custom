@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{6004d1f3-a617-f111-8341-6045bd528a8a}'
+  '@Name': 【AI個別検証用】F-00-002_漢字カナ不整合チェック
+  JsonFileName: /modernflows/6004d1f3-a617-f111-8341-6045bd528a8a/AIF-00-002_-6004D1F3-A617-F111-8341-6045BD528A8A.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.2.0.2
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【AI個別検証用】F-00-002_漢字カナ不整合チェック

@@ -1,0 +1,183 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_00509"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "157dad1d-c4df-4f46-ac34-e50bebd5e3ca"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "GUID",
+                  "title": "テキスト",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "ファイルの取得_(プロパティのみ)": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "4b4be46d-0fff-4ee5-931b-28046ed4dfe6"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://ts.accenture.com/sites/TfLSDigitalDelivery",
+              "table": "6ec82ed1-bf27-44b2-9f67-07e3f5df583c",
+              "folderPath": "/Shared Documents/202_Power Platform/060.Tools/03.GenDocVision/01.見積書",
+              "viewScopeOption": "Default"
+            },
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            }
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "For_each": {
+          "foreach": "@outputs('ファイルの取得_(プロパティのみ)')?['body/value']",
+          "actions": {
+            "変数の設定": {
+              "runAfter": {
+                "子フローの実行": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "eb332210-bf49-4347-9384-5a8441328263"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "testvar",
+                "value": "@items('For_each')?['{Link}']"
+              }
+            },
+            "子フローの実行": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "9898a486-ad12-4fb2-917c-36b2dd1eeffe"
+              },
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "27849795-2d80-f011-b4cc-002248651860"
+                },
+                "body": {
+                  "text": "@items('For_each')?['{Link}']",
+                  "text_1": "@triggerBody()?['text']",
+                  "text_2": "@items('For_each')?['{Identifier}']",
+                  "text_3": "@items('For_each')?['{FilenameWithExtension}']"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "変数を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "be2a65cd-43c1-456c-90a7-286250b71866"
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 50
+            }
+          }
+        },
+        "変数を初期化する": {
+          "runAfter": {
+            "ファイルの取得_(プロパティのみ)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "578253e2-67c0-486b-bbd3-bea5a93ef6b6"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "testvar",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Power_App_またはフローに応答する": {
+          "runAfter": {
+            "For_each": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c8d790a3-417b-41bd-9d54-c82eed73a13e"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "log": "@{variables('testvar')}@{triggerBody()?['text']}"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "log": {
+                  "title": "log",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

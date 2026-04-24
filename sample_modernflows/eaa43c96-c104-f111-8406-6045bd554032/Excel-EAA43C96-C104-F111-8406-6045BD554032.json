@@ -1,0 +1,207 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_excelonlinebusiness": {
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_90ce9"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_c6193"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "94875565-1bc2-4df8-b12a-ab8f26738212"
+          }
+        }
+      },
+      "actions": {
+        "表内に存在する行を一覧表示": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+              "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+              "file": "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD",
+              "table": "{00000000-000C-0000-FFFF-FFFF00000000}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "operationId": "GetItems",
+              "connectionName": "shared_excelonlinebusiness"
+            }
+          },
+          "runAfter": {},
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          },
+          "metadata": {
+            "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD": "/01_test/test/詳細データ管理テーブル.xlsx",
+            "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}"
+          }
+        },
+        "詳細データ管理テーブルデータでループ": {
+          "type": "Foreach",
+          "foreach": "@outputs('表内に存在する行を一覧表示')?['body/value']",
+          "actions": {
+            "行の削除": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                  "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                  "file": "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD",
+                  "table": "{00000000-000C-0000-FFFF-FFFF00000000}",
+                  "idColumn": "ドキュメント項目管理",
+                  "id": "@items('詳細データ管理テーブルデータでループ')?['ドキュメント項目管理']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                  "operationId": "DeleteItem",
+                  "connectionName": "shared_excelonlinebusiness"
+                }
+              },
+              "metadata": {
+                "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD": "/01_test/test/詳細データ管理テーブル.xlsx",
+                "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}"
+              }
+            }
+          },
+          "runAfter": {
+            "表内に存在する行を一覧表示": [
+              "Succeeded"
+            ]
+          }
+        },
+        "エラーリスト管理テーブルのステータスが「データ取り込み」": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_document_imports",
+              "$select": "ca_policy_number",
+              "$filter": "ca_processing_status eq 'データ取り込み'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "詳細データ管理テーブルデータでループ": [
+              "Succeeded"
+            ]
+          }
+        },
+        "エラーリスト管理テーブルデータでループ": {
+          "type": "Foreach",
+          "foreach": "@outputs('エラーリスト管理テーブルのステータスが「データ取り込み」')?['body/value']",
+          "actions": {
+            "対象の詳細データ管理テーブルデータ": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_document_items",
+                  "$filter": "ca_policy_number eq '@{item()?['ca_policy_number']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "詳細データ毎に処理を実施する": {
+              "type": "Foreach",
+              "foreach": "@outputs('対象の詳細データ管理テーブルデータ')?['body/value']",
+              "actions": {
+                "表に行を追加": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                      "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                      "file": "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD",
+                      "table": "{00000000-000C-0000-FFFF-FFFF00000000}",
+                      "item/証券番号": "@items('詳細データ毎に処理を実施する')?['ca_policy_number']",
+                      "item/項目ID": "@items('詳細データ毎に処理を実施する')?['_ca_field_id_value@OData.Community.Display.V1.FormattedValue']",
+                      "item/項目値": "@items('詳細データ毎に処理を実施する')?['ca_document_value']",
+                      "item/一次チェック判定": "@items('詳細データ毎に処理を実施する')?['ca_1st_check_result']",
+                      "item/一次チェック回復": "@items('詳細データ毎に処理を実施する')?['ca_1st_check_recovery_value']",
+                      "item/一次チェック回復根拠": "@items('詳細データ毎に処理を実施する')?['ca_1st_check_recovery_reason']",
+                      "item/ドキュメント項目管理": "@items('詳細データ毎に処理を実施する')?['ca_document_itemid']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                      "operationId": "AddRowV2",
+                      "connectionName": "shared_excelonlinebusiness"
+                    }
+                  },
+                  "metadata": {
+                    "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD": "/01_test/test/詳細データ管理テーブル.xlsx",
+                    "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}"
+                  }
+                }
+              },
+              "runAfter": {
+                "対象の詳細データ管理テーブルデータ": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "エラーリスト管理テーブルのステータスが「データ取り込み」": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{2eab4195-5ad9-f011-8544-000d3a4145ae}'
+  '@Name': 【エラー回復】F-05-002_項目補正-AIプロンプト実行
+  JsonFileName: /modernflows/2eab4195-5ad9-f011-8544-000d3a4145ae/F-05-002_-AI-2EAB4195-5AD9-F011-8544-000D3A4145AE.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【エラー回復】F-05-002_項目補正-AIプロンプト実行

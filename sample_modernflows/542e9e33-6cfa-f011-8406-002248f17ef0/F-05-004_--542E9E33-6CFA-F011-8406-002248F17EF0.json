@@ -1,0 +1,1593 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_155c9"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "payload情報を連携する",
+                  "title": "payload",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "プロンプト名を連携する",
+                  "title": "プロンプト名",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "ナレッジ機能を連携する",
+                  "title": "ナレッジ機能",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "点検結果テーブルを連携する",
+                  "title": "点検結果テーブル",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "詳細データ管理を連携する",
+                  "title": "詳細データ管理テーブル",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_5": {
+                  "description": "AIプロンプトを連携する",
+                  "title": "AIプロンプト",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "364f6892-36fa-4b74-ade5-561e2de91dba"
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "JSON_の解析(AIプロンプトの情報を解析)": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['text_5']",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ca_id": {
+                      "type": "string"
+                    },
+                    "ca_ai_promptid": {
+                      "type": "string"
+                    },
+                    "ca_prompt": {
+                      "type": "string"
+                    },
+                    "ca_prompt2": {
+                      "type": "string"
+                    },
+                    "ca_prompt3": {
+                      "type": "string"
+                    },
+                    "ca_prompt4": {
+                      "type": "string"
+                    },
+                    "ca_prompt5": {
+                      "type": "string"
+                    },
+                    "ca_prompt6": {
+                      "type": "string"
+                    },
+                    "ca_prompt7": {
+                      "type": "string"
+                    },
+                    "ca_prompt8": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "JSON_の解析(親フローからの情報を解析)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c79cc1ce-c4f4-4776-8fd0-0d8164e8c138"
+              }
+            },
+            "JSON_の解析(親フローからの情報を解析)": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['text']",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "document_ImportRecordId": {
+                      "type": "string"
+                    },
+                    "document_item": {
+                      "type": "string"
+                    },
+                    "document_value": {
+                      "type": "string"
+                    },
+                    "document_selectionId": {
+                      "type": "string"
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "document_item_id": {
+                      "type": "string"
+                    },
+                    "document_id": {
+                      "type": "string"
+                    },
+                    "error_flag": {
+                      "type": "boolean"
+                    },
+                    "main_document_url": {
+                      "type": "string"
+                    },
+                    "sub_document_url": {
+                      "type": "string"
+                    },
+                    "error_type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "e47fdbe2-32d3-4763-b326-e600d421a397"
+              }
+            },
+            "エラーフラグ": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('JSON_の解析(親フローからの情報を解析)')?['error_flag']",
+                      true
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "氏名漢字の値有無": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body('JSON_の解析(親フローからの情報を解析)')?['document_value']",
+                          ""
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "漢字不鮮明チェックプロンプト": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_id']",
+                              "漢字不鮮明チェック"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "既契約存在しない？": {
+                          "type": "If",
+                          "expression": {
+                            "and": [
+                              {
+                                "equals": [
+                                  "@length(variables('ATLAS既契約データ'))",
+                                  0
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "メイン書類確認チェックNG": {
+                              "type": "If",
+                              "expression": {
+                                "and": [
+                                  {
+                                    "equals": [
+                                      "@variables('書類確認チェック結果')",
+                                      "NG"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "actions": {
+                                "別書類参照可能か": {
+                                  "type": "If",
+                                  "expression": {
+                                    "and": [
+                                      {
+                                        "not": {
+                                          "equals": [
+                                            "@length(body('JSON_の解析(親フローからの情報を解析)')?['sub_document_url'])",
+                                            2
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "equals": [
+                                          "@body('JSON_の解析(親フローからの情報を解析)')?['document_item']",
+                                          "01_policyholder_name_kanji"
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "actions": {
+                                    "Do_until": {
+                                      "type": "Until",
+                                      "expression": "@equals(or(equals(variables('書類確認チェック結果'),'OK'),equals(variables('index'),length(json(body('JSON_の解析(親フローからの情報を解析)')?['sub_document_url'])))),true)",
+                                      "limit": {
+                                        "count": 60,
+                                        "timeout": "PT1H"
+                                      },
+                                      "actions": {
+                                        "サブ書類連番の値を増やす": {
+                                          "type": "IncrementVariable",
+                                          "inputs": {
+                                            "name": "index",
+                                            "value": 1
+                                          },
+                                          "runAfter": {
+                                            "子フローの実行（F-05-009_項目補正-途中点検結果登録）_2": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "1ae5b0fc-f29e-4426-b23a-d1ab2f78b4a1"
+                                          }
+                                        },
+                                        "サブ書類確認チェック結果の更新": {
+                                          "type": "SetVariable",
+                                          "inputs": {
+                                            "name": "書類確認チェック結果",
+                                            "value": "@outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/check_result']"
+                                          },
+                                          "runAfter": {
+                                            "サブ書類連番の値を増やす": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "4e8fb532-a0b0-4358-bc50-b8acdb1030a5"
+                                          }
+                                        },
+                                        "サブ書類の取得": {
+                                          "type": "OpenApiConnection",
+                                          "inputs": {
+                                            "parameters": {
+                                              "dataset": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                                              "path": "@outputs('サブ書類を参照順に並替える')[variables('index')]['path']",
+                                              "inferContentType": true
+                                            },
+                                            "host": {
+                                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                                              "operationId": "GetFileContentByPath",
+                                              "connectionName": "shared_sharepointonline-1"
+                                            }
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "9c3144c6-c8da-4fc9-b5b6-1fbe9e819063"
+                                          }
+                                        },
+                                        "プロンプトを実行する（サブ書類読取り）": {
+                                          "type": "OpenApiConnection",
+                                          "inputs": {
+                                            "parameters": {
+                                              "recordId": "4bc9d56d-9d5a-434d-83d2-6d6a44c8cd81",
+                                              "item/requestv2/Prompt": "@body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_prompt2']",
+                                              "item/requestv2/_30e1_30a4_30f3_66f8_985e/base64Encoded": "@base64(body('サブ書類の取得'))"
+                                            },
+                                            "host": {
+                                              "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                                              "operationId": "aibuilderpredict_customprompt",
+                                              "connectionName": "shared_commondataserviceforapps-1"
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "サブ書類の取得": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "fa128591-2a71-443f-906c-f267ee0a731b",
+                                            "flowSystemMetadata": {
+                                              "portalOperationApiDisplayNameOverride": "AI Builder",
+                                              "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                                              "portalOperationBrandColorOverride": "#0A76C4",
+                                              "portalOperationApiTierOverride": "Standard"
+                                            }
+                                          }
+                                        },
+                                        "プロンプトを実行する（サブ書類確認チェック）": {
+                                          "type": "OpenApiConnection",
+                                          "inputs": {
+                                            "parameters": {
+                                              "recordId": "681a8d01-7cf0-452d-842a-99f74c6f4d38",
+                                              "item/requestv2/_8a3c_5238_756a_53f7": "@body('JSON_の解析(親フローからの情報を解析)')?['document_id']",
+                                              "item/requestv2/Inputdata": "@outputs('プロンプトを実行する（サブ書類読取り）')?['body/responsev2/predictionOutput/text']",
+                                              "item/requestv2/InputdataType": "@outputs('サブ書類を参照順に並替える')[variables('index')]['name']",
+                                              "item/requestv2/Prompt": "@body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_prompt4']"
+                                            },
+                                            "host": {
+                                              "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                                              "operationId": "aibuilderpredict_customprompt",
+                                              "connectionName": "shared_commondataserviceforapps-1"
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "子フローの実行（F-05-009_項目補正-途中点検結果登録）_1": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "05fc9f1c-3b2e-4b28-bde9-053ccaf3e008",
+                                            "flowSystemMetadata": {
+                                              "portalOperationApiDisplayNameOverride": "AI Builder",
+                                              "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                                              "portalOperationBrandColorOverride": "#0A76C4",
+                                              "portalOperationApiTierOverride": "Standard"
+                                            }
+                                          }
+                                        },
+                                        "途中点検結果テーブル登録用_1": {
+                                          "type": "Compose",
+                                          "inputs": {
+                                            "ca_ai_inspection_details": "@{outputs('プロンプトを実行する（サブ書類読取り）')?['body/responsev2/predictionOutput/text']}",
+                                            "ca_document_item_id@odata.bind": "ca_document_items(@{body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']})",
+                                            "ca_prompt_id@odata.bind": "ca_ai_prompts(@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_ai_promptid']})",
+                                            "ca_document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                                            "ca_inspection_details": "対象証券番号：@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}　プロンプト：@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_prompt2']}"
+                                          },
+                                          "runAfter": {
+                                            "プロンプトを実行する（サブ書類読取り）": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "72af54cf-fdd1-4ffd-be22-7be61c55939e"
+                                          }
+                                        },
+                                        "子フローの実行（F-05-009_項目補正-途中点検結果登録）_1": {
+                                          "type": "Workflow",
+                                          "inputs": {
+                                            "host": {
+                                              "workflowReferenceName": "fdb5c92f-ba16-f111-8341-000d3acf8a1a"
+                                            },
+                                            "body": {
+                                              "text": "@string(outputs('途中点検結果テーブル登録用_1'))",
+                                              "text_1": "@triggerBody()?['text_3']"
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "途中点検結果テーブル登録用_1": [
+                                              "Succeeded"
+                                            ]
+                                          }
+                                        },
+                                        "途中点検結果テーブル登録用_2": {
+                                          "type": "Compose",
+                                          "inputs": {
+                                            "ca_ai_inspection_details": "@{outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/text']}",
+                                            "ca_document_item_id@odata.bind": "ca_document_items(@{body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']})",
+                                            "ca_prompt_id@odata.bind": "ca_ai_prompts(@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_ai_promptid']})",
+                                            "ca_document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                                            "ca_inspection_details": "対象証券番号：@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}　プロンプト：@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_prompt4']}"
+                                          },
+                                          "runAfter": {
+                                            "プロンプトを実行する（サブ書類確認チェック）": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "metadata": {
+                                            "operationMetadataId": "72af54cf-fdd1-4ffd-be22-7be61c55939e"
+                                          }
+                                        },
+                                        "子フローの実行（F-05-009_項目補正-途中点検結果登録）_2": {
+                                          "type": "Workflow",
+                                          "inputs": {
+                                            "host": {
+                                              "workflowReferenceName": "fdb5c92f-ba16-f111-8341-000d3acf8a1a"
+                                            },
+                                            "body": {
+                                              "text": "@string(outputs('途中点検結果テーブル登録用_2'))",
+                                              "text_1": "@triggerBody()?['text_3']"
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "途中点検結果テーブル登録用_2": [
+                                              "Succeeded"
+                                            ]
+                                          }
+                                        }
+                                      },
+                                      "runAfter": {
+                                        "サブ書類を参照順に並替える": [
+                                          "Succeeded"
+                                        ]
+                                      },
+                                      "metadata": {
+                                        "operationMetadataId": "a3568cca-60bd-4f32-8dc0-16e6d6b8499e"
+                                      }
+                                    },
+                                    "サブ書類を参照順に並替える": {
+                                      "type": "Compose",
+                                      "inputs": "@sort(json(body('JSON_の解析(親フローからの情報を解析)')?['sub_document_url']), 'order')"
+                                    },
+                                    "別書類で回復できたか": {
+                                      "type": "If",
+                                      "expression": {
+                                        "and": [
+                                          {
+                                            "equals": [
+                                              "@variables('書類確認チェック結果')",
+                                              "OK"
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "actions": {
+                                        "回復結果作成（パターン4別書類確認により回復）": {
+                                          "type": "Compose",
+                                          "inputs": {
+                                            "check_result": "@{outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/check_result']}",
+                                            "document_item": "@{outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/document_item']}",
+                                            "document_recovery_value": "@{outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/document_recovery_value']}",
+                                            "recovery_reason": "@{outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/recovery_reason']}",
+                                            "recovery_process": "@{outputs('プロンプトを実行する（サブ書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/recovery_process']}"
+                                          }
+                                        },
+                                        "回復結果を設定（パターン4別書類確認により回復）": {
+                                          "type": "AppendToArrayVariable",
+                                          "inputs": {
+                                            "name": "一次チェック回復結果",
+                                            "value": "@outputs('回復結果作成（パターン4別書類確認により回復）')"
+                                          },
+                                          "runAfter": {
+                                            "回復結果作成（パターン4別書類確認により回復）": [
+                                              "Succeeded"
+                                            ]
+                                          }
+                                        }
+                                      },
+                                      "else": {
+                                        "actions": {
+                                          "回復結果作成（パターン1要問合せ）_2": {
+                                            "type": "Compose",
+                                            "inputs": {
+                                              "check_result": "NG",
+                                              "document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                                              "document_recovery_value": "",
+                                              "recovery_reason": "氏名欄に不鮮明情報あり、AIでの回復困難。要問合せ。@{first(json(body('JSON_の解析(親フローからの情報を解析)')?['main_document_url']))['url']}",
+                                              "recovery_process": ""
+                                            }
+                                          },
+                                          "回復結果を設定（パターン1要問合せ）_2": {
+                                            "type": "AppendToArrayVariable",
+                                            "inputs": {
+                                              "name": "一次チェック回復結果",
+                                              "value": "@outputs('回復結果作成（パターン1要問合せ）_2')"
+                                            },
+                                            "runAfter": {
+                                              "回復結果作成（パターン1要問合せ）_2": [
+                                                "Succeeded"
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "runAfter": {
+                                        "Do_until": [
+                                          "Succeeded"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "else": {
+                                    "actions": {
+                                      "回復結果作成（パターン1要問合せ）_1": {
+                                        "type": "Compose",
+                                        "inputs": {
+                                          "check_result": "NG",
+                                          "document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                                          "document_recovery_value": "",
+                                          "recovery_reason": "氏名欄に不鮮明情報あり、AIでの回復困難。要問合せ。@{first(json(body('JSON_の解析(親フローからの情報を解析)')?['main_document_url']))['url']}",
+                                          "recovery_process": ""
+                                        }
+                                      },
+                                      "回復結果を設定（パターン1要問合せ）_1": {
+                                        "type": "AppendToArrayVariable",
+                                        "inputs": {
+                                          "name": "一次チェック回復結果",
+                                          "value": "@outputs('回復結果作成（パターン1要問合せ）_1')"
+                                        },
+                                        "runAfter": {
+                                          "回復結果作成（パターン1要問合せ）_1": [
+                                            "Succeeded"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "回復結果作成（パターン3同一書類確認により回復）": {
+                                    "type": "Compose",
+                                    "inputs": {
+                                      "check_result": "@{outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/check_result']}",
+                                      "document_item": "@{outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/document_item']}",
+                                      "document_recovery_value": "@{outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/document_recovery_value']}",
+                                      "recovery_reason": "@{outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/recovery_reason']}",
+                                      "recovery_process": "@{outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/recovery_process']}"
+                                    }
+                                  },
+                                  "回復結果を設定（パターン3同一書類確認により回復）": {
+                                    "type": "AppendToArrayVariable",
+                                    "inputs": {
+                                      "name": "一次チェック回復結果",
+                                      "value": "@outputs('回復結果作成（パターン3同一書類確認により回復）')"
+                                    },
+                                    "runAfter": {
+                                      "回復結果作成（パターン3同一書類確認により回復）": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "被保険者氏名漢字の回復ではない？": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "02b3a540-2882-436f-8101-bbfeb229abcb"
+                              }
+                            },
+                            "被保険者氏名漢字の回復ではない？": {
+                              "type": "If",
+                              "expression": {
+                                "and": [
+                                  {
+                                    "not": {
+                                      "equals": [
+                                        "@body('JSON_の解析(親フローからの情報を解析)')?['document_item']",
+                                        "01_insured_name_kanji"
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              "actions": {
+                                "プロンプトを実行する（メイン書類確認チェック）": {
+                                  "type": "OpenApiConnection",
+                                  "inputs": {
+                                    "parameters": {
+                                      "recordId": "6fbd7289-6575-4c3f-b25f-78d8b5e62a32",
+                                      "item/requestv2/_8a3c_5238_756a_53f7": "@body('JSON_の解析(親フローからの情報を解析)')?['document_id']",
+                                      "item/requestv2/Inputdata": "''",
+                                      "item/requestv2/Prompt": "@body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_prompt3']"
+                                    },
+                                    "host": {
+                                      "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                                      "operationId": "aibuilderpredict_customprompt",
+                                      "connectionName": "shared_commondataserviceforapps-1"
+                                    }
+                                  },
+                                  "runAfter": {
+                                    "詳細データ管理データ取得": [
+                                      "Succeeded"
+                                    ]
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "ade78319-e486-4569-a50d-e57157377743",
+                                    "flowSystemMetadata": {
+                                      "portalOperationApiDisplayNameOverride": "AI Builder",
+                                      "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                                      "portalOperationBrandColorOverride": "#0A76C4",
+                                      "portalOperationApiTierOverride": "Standard"
+                                    }
+                                  }
+                                },
+                                "メイン書類確認チェック結果の更新": {
+                                  "type": "SetVariable",
+                                  "inputs": {
+                                    "name": "書類確認チェック結果",
+                                    "value": "@outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/structuredOutput/check_result']"
+                                  },
+                                  "runAfter": {
+                                    "子フローの実行（F-05-009_項目補正-途中点検結果登録）": [
+                                      "Succeeded"
+                                    ]
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "4e8fb532-a0b0-4358-bc50-b8acdb1030a5"
+                                  }
+                                },
+                                "詳細データ管理データ取得": {
+                                  "type": "OpenApiConnection",
+                                  "inputs": {
+                                    "parameters": {
+                                      "entityName": "ca_document_items",
+                                      "$filter": "ca_policy_number eq '@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}'"
+                                    },
+                                    "host": {
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                      "operationId": "ListRecords",
+                                      "connectionName": "shared_commondataserviceforapps-1"
+                                    }
+                                  }
+                                },
+                                "途中点検結果テーブル登録用": {
+                                  "type": "Compose",
+                                  "inputs": {
+                                    "ca_ai_inspection_details": "@{outputs('プロンプトを実行する（メイン書類確認チェック）')?['body/responsev2/predictionOutput/text']}",
+                                    "ca_document_item_id@odata.bind": "ca_document_items(@{body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']})",
+                                    "ca_prompt_id@odata.bind": "ca_ai_prompts(@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_ai_promptid']})",
+                                    "ca_document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                                    "ca_inspection_details": "対象証券番号：@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}　プロンプト：@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_prompt3']}"
+                                  },
+                                  "runAfter": {
+                                    "プロンプトを実行する（メイン書類確認チェック）": [
+                                      "Succeeded"
+                                    ]
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "72af54cf-fdd1-4ffd-be22-7be61c55939e"
+                                  }
+                                },
+                                "子フローの実行（F-05-009_項目補正-途中点検結果登録）": {
+                                  "type": "Workflow",
+                                  "inputs": {
+                                    "host": {
+                                      "workflowReferenceName": "fdb5c92f-ba16-f111-8341-000d3acf8a1a"
+                                    },
+                                    "body": {
+                                      "text": "@string(outputs('途中点検結果テーブル登録用'))",
+                                      "text_1": "@triggerBody()?['text_3']"
+                                    }
+                                  },
+                                  "runAfter": {
+                                    "途中点検結果テーブル登録用": [
+                                      "Succeeded"
+                                    ]
+                                  }
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "メイン書類確認チェック結果の更新_1": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "書類確認チェック結果",
+                                      "value": "NG"
+                                    },
+                                    "metadata": {
+                                      "operationMetadataId": "4e8fb532-a0b0-4358-bc50-b8acdb1030a5"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "ATLAS既契約データ優先順位取得": {
+                                "type": "Select",
+                                "inputs": {
+                                  "from": "@variables('ATLAS既契約データ')",
+                                  "select": {
+                                    "優先順位": "@{if(equals(item()?['ca_sts'],'000-0'),1,if(equals(item()?['ca_sts'],'080-0'),2,if(equals(item()?['ca_sts'],'090-0'),3,if(equals(item()?['ca_sts'],'085-0'),4,99))))}@{sub(99999999,int(formatDateTime(item()?['ca_effective_date'], 'yyyyMMdd')))}",
+                                    "証券番号": "@item()?['ca_policy_number']",
+                                    "STS": "@item()?['ca_sts']",
+                                    "契約日": "@item()?['ca_effective_date']",
+                                    "契約者氏名漢字": "@item()?['ca_policyholder_name_kanji']",
+                                    "被保険者氏名漢字": "@item()?['ca_insured_name_kanji']"
+                                  }
+                                }
+                              },
+                              "回復元ATLAS既契約データ決定": {
+                                "type": "Compose",
+                                "inputs": "@first(sort(body('ATLAS既契約データ優先順位取得'),'優先順位'))",
+                                "runAfter": {
+                                  "ATLAS既契約データ優先順位取得": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              },
+                              "どの氏名漢字を回復するか": {
+                                "type": "Switch",
+                                "expression": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item']",
+                                "default": {
+                                  "actions": {}
+                                },
+                                "cases": {
+                                  "契約者": {
+                                    "actions": {
+                                      "回復結果作成（パターン2契約確認により契約者氏名漢字回復）": {
+                                        "type": "Compose",
+                                        "inputs": {
+                                          "check_result": "OK",
+                                          "document_item": "01_policyholder_name_kanji",
+                                          "document_recovery_value": "@{outputs('回復元ATLAS既契約データ決定')?['契約者氏名漢字']}",
+                                          "recovery_reason": "氏名欄に不鮮明情報あり、既契約/同時契約により修正：証券番号@{outputs('回復元ATLAS既契約データ決定')?['証券番号']}",
+                                          "recovery_process": "参照できる既契約/同時契約が存在したため、既契約/同時契約の契約者氏名漢字にて回復"
+                                        }
+                                      },
+                                      "回復結果を設定（パターン2契約確認により契約者氏名漢字回復）": {
+                                        "type": "AppendToArrayVariable",
+                                        "inputs": {
+                                          "name": "一次チェック回復結果",
+                                          "value": "@outputs('回復結果作成（パターン2契約確認により契約者氏名漢字回復）')"
+                                        },
+                                        "runAfter": {
+                                          "回復結果作成（パターン2契約確認により契約者氏名漢字回復）": [
+                                            "Succeeded"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "case": "01_policyholder_name_kanji"
+                                  },
+                                  "被保険者": {
+                                    "actions": {
+                                      "回復結果作成（パターン2契約確認により被保険者氏名漢字回復）": {
+                                        "type": "Compose",
+                                        "inputs": {
+                                          "check_result": "OK",
+                                          "document_item": "01_insured_name_kanji",
+                                          "document_recovery_value": "@{outputs('回復元ATLAS既契約データ決定')?['被保険者氏名漢字']}",
+                                          "recovery_reason": "氏名欄に不鮮明情報あり、既契約/同時契約により修正：証券番号@{outputs('回復元ATLAS既契約データ決定')?['証券番号']}",
+                                          "recovery_process": "参照できる既契約/同時契約が存在したため、既契約/同時契約の被保険者氏名漢字にて回復"
+                                        }
+                                      },
+                                      "回復結果を設定（パターン2契約確認により被保険者氏名漢字回復）": {
+                                        "type": "AppendToArrayVariable",
+                                        "inputs": {
+                                          "name": "一次チェック回復結果",
+                                          "value": "@outputs('回復結果作成（パターン2契約確認により被保険者氏名漢字回復）')"
+                                        },
+                                        "runAfter": {
+                                          "回復結果作成（パターン2契約確認により被保険者氏名漢字回復）": [
+                                            "Succeeded"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "case": "01_insured_name_kanji"
+                                  }
+                                },
+                                "runAfter": {
+                                  "回復元ATLAS既契約データ決定": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "属性ごとに分岐": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "913f0dca-fd35-4190-9466-211028f5fe73"
+                          }
+                        },
+                        "ATLAS登録データ取得": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "ca_registered_datas",
+                              "$select": "ca_policyholder_name_kana, ca_policyholder_birthday, ca_insured_name_kana, ca_insured_birthday",
+                              "$filter": "ca_policy_number eq '@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}'"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "b148facc-8b11-42a1-bacc-bbc7c10c035a"
+                          }
+                        },
+                        "属性ごとに分岐": {
+                          "type": "Switch",
+                          "expression": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item']",
+                          "default": {
+                            "actions": {}
+                          },
+                          "cases": {
+                            "属性が契約者": {
+                              "actions": {
+                                "ATLAS既契約データ取得（契約者）": {
+                                  "type": "OpenApiConnection",
+                                  "inputs": {
+                                    "parameters": {
+                                      "entityName": "ca_existing_contract_datas",
+                                      "$filter": "ca_policyholder_name_kana eq '@{first(outputs('ATLAS登録データ取得')?['body/value'])?['ca_policyholder_name_kana']}' and ca_policyholder_birthday eq '@{first(outputs('ATLAS登録データ取得')?['body/value'])?['ca_policyholder_birthday']}' and (ca_sts eq '000-0' or ca_sts eq '080-0' or ca_sts eq '090-0' or ca_sts eq '085-0')"
+                                    },
+                                    "host": {
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                      "operationId": "ListRecords",
+                                      "connectionName": "shared_commondataserviceforapps-1"
+                                    }
+                                  }
+                                },
+                                "ATLAS既契約データ（契約者）の設定": {
+                                  "type": "SetVariable",
+                                  "inputs": {
+                                    "name": "ATLAS既契約データ",
+                                    "value": "@outputs('ATLAS既契約データ取得（契約者）')?['body/value']"
+                                  },
+                                  "runAfter": {
+                                    "ATLAS既契約データ取得（契約者）": [
+                                      "SUCCEEDED"
+                                    ]
+                                  }
+                                }
+                              },
+                              "case": "01_policyholder_name_kanji"
+                            },
+                            "属性が被保険者": {
+                              "actions": {
+                                "ATLAS既契約データ取得（被保険者）": {
+                                  "type": "OpenApiConnection",
+                                  "inputs": {
+                                    "parameters": {
+                                      "entityName": "ca_existing_contract_datas",
+                                      "$filter": "ca_insured_name_kana eq '@{first(outputs('ATLAS登録データ取得')?['body/value'])?['ca_insured_name_kana']}' and ca_insured_birthday eq '@{first(outputs('ATLAS登録データ取得')?['body/value'])?['ca_insured_birthday']}' and (ca_sts eq '000-0' or ca_sts eq '080-0' or ca_sts eq '090-0' or ca_sts eq '085-0')"
+                                    },
+                                    "host": {
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                      "operationId": "ListRecords",
+                                      "connectionName": "shared_commondataserviceforapps-1"
+                                    }
+                                  }
+                                },
+                                "ATLAS既契約データ（被保険者）の設定": {
+                                  "type": "SetVariable",
+                                  "inputs": {
+                                    "name": "ATLAS既契約データ",
+                                    "value": "@outputs('ATLAS既契約データ取得（被保険者）')?['body/value']"
+                                  },
+                                  "runAfter": {
+                                    "ATLAS既契約データ取得（被保険者）": [
+                                      "SUCCEEDED"
+                                    ]
+                                  }
+                                }
+                              },
+                              "case": "01_insured_name_kanji"
+                            }
+                          },
+                          "runAfter": {
+                            "ATLAS登録データ取得": [
+                              "SUCCEEDED"
+                            ]
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "metadata": {
+                        "operationMetadataId": "6e403a97-87c6-4197-a19b-e57eaa1517d3"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "回復結果作成（パターン1要問合せ）": {
+                        "type": "Compose",
+                        "inputs": {
+                          "check_result": "NG",
+                          "document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                          "document_recovery_value": "",
+                          "recovery_reason": "氏名欄に不鮮明情報あり、AIでの回復困難。要問合せ。@{first(json(body('JSON_の解析(親フローからの情報を解析)')?['main_document_url']))['url']}",
+                          "recovery_process": ""
+                        }
+                      },
+                      "回復結果を設定（パターン1要問合せ）": {
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "一次チェック回復結果",
+                          "value": "@outputs('回復結果作成（パターン1要問合せ）')"
+                        },
+                        "runAfter": {
+                          "回復結果作成（パターン1要問合せ）": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "22ce3376-a5ec-4eaa-8a1c-dbb0adb70cbe"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "回復結果作成（ステータスCompleted更新のため）": {
+                    "type": "Compose",
+                    "inputs": {
+                      "check_result": "",
+                      "document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                      "document_recovery_value": "",
+                      "recovery_reason": "",
+                      "recovery_process": ""
+                    }
+                  },
+                  "回復結果を設定（ステータスCompleted更新のため）": {
+                    "type": "AppendToArrayVariable",
+                    "inputs": {
+                      "name": "一次チェック回復結果",
+                      "value": "@outputs('回復結果作成（ステータスCompleted更新のため）')"
+                    },
+                    "runAfter": {
+                      "回復結果作成（ステータスCompleted更新のため）": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "JSON_の解析(AIプロンプトの情報を解析)": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "正常終了を通知": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "promptname": {
+                      "title": "promptName",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorinfo": {
+                      "title": "errorInfo",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Success",
+                  "promptname": "@{triggerBody()?['text_1']}",
+                  "errorinfo": "N/A"
+                }
+              },
+              "runAfter": {
+                "F-05-003_項目補正-点検結果登録": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d4fd4b65-88e8-43ad-a717-65519f969eb5"
+              }
+            },
+            "F-05-003_項目補正-点検結果登録": {
+              "type": "Foreach",
+              "foreach": "@variables('一次チェック回復結果')",
+              "actions": {
+                "JSON_の解析（回復結果）": {
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@items('F-05-003_項目補正-点検結果登録')",
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "check_result": {
+                          "type": "string"
+                        },
+                        "document_item": {
+                          "type": "string"
+                        },
+                        "document_recovery_value": {
+                          "type": "string"
+                        },
+                        "recovery_reason": {
+                          "type": "string"
+                        },
+                        "recovery_process": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "更新対象のレコードを取得する": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "ca_document_items",
+                      "$select": "ca_policy_number, _ca_field_id_value, ca_document_value, ca_document_itemid",
+                      "$filter": "ca_policy_number eq '@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}' and ca_field_id/ca_field_id eq '@{body('JSON_の解析（回復結果）')?['document_item']}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runAfter": {
+                    "JSON_の解析（回復結果）": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "点検結果テーブル登録用": {
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_ai_inspection_details": "@{body('JSON_の解析（回復結果）')}",
+                    "ca_document_item_id@odata.bind": "ca_document_items(@{body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']})",
+                    "ca_prompt_id@odata.bind": "ca_ai_prompts(@{body('JSON_の解析(AIプロンプトの情報を解析)')?['ca_ai_promptid']})",
+                    "ca_document_item": "@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}",
+                    "ca_inspection_details": "対象証券番号：@{body('JSON_の解析(親フローからの情報を解析)')?['document_id']}　最終結果"
+                  },
+                  "runAfter": {
+                    "更新対象のレコードを取得する": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "72af54cf-fdd1-4ffd-be22-7be61c55939e"
+                  }
+                },
+                "子フローの実行（F-05-003_項目補正-点検結果登録）": {
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "9ac6ee46-24da-f011-8544-000d3a4145ae"
+                    },
+                    "body": {
+                      "text": "@string(outputs('点検結果テーブル登録用'))",
+                      "text_1": "@triggerBody()?['text_3']",
+                      "text_3": "@body('JSON_の解析（回復結果）')?['document_recovery_value']",
+                      "text_4": "@body('JSON_の解析（回復結果）')?['check_result']",
+                      "text_5": "@body('JSON_の解析（回復結果）')?['recovery_reason']",
+                      "text_2": "@triggerBody()?['text_4']",
+                      "text_6": "@first(body('更新対象のレコードを取得する')?['value'])?['ca_document_itemid']\r\n"
+                    }
+                  },
+                  "runAfter": {
+                    "点検結果テーブル登録用": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "エラーフラグ": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "failedErrorMessageを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "61cfa150-4e11-4681-8759-00374113d38e"
+          }
+        },
+        "登録IDを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "登録ID",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "AI実行結果ログを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "275d350f-f18a-4ba6-bacb-1c88c99cf71f"
+          }
+        },
+        "サブ書類連番を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "index",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "変数を初期化する": [
+              "SUCCEEDED"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "29bcbf93-b6e4-434e-9158-4ab77034fb39"
+          }
+        },
+        "書類確認チェック結果を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "書類確認チェック結果",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "サブ書類連番を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "bbe1ffb1-75c5-4ed3-9f4b-48a54d412047"
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了を通知": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "promptname": {
+                      "title": "promptName",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorinfo": {
+                      "title": "errorInfo",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed",
+                  "promptname": "@{triggerBody()?['text_1']}",
+                  "errorinfo": "@{outputs('エラー情報連携用')}"
+                }
+              },
+              "runAfter": {
+                "エラー情報連携用": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d4fd4b65-88e8-43ad-a717-65519f969eb5"
+              }
+            },
+            "ロールバック処理": {
+              "type": "Scope",
+              "actions": {
+                "AI点検結果を削除": {
+                  "type": "Foreach",
+                  "foreach": "@variables('登録ID')",
+                  "actions": {
+                    "行を削除する": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@triggerBody()?['text_3']",
+                          "recordId": "@items('AI点検結果を削除')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d49a22c9-9453-4bc8-91c3-b17b663a0720"
+                  }
+                },
+                "詳細データ管理テーブル登録用(Failed)": {
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_ai_inspection_status": 3
+                  },
+                  "runAfter": {
+                    "AI点検結果を削除": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Skipped",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "984d7f81-5091-4fce-8cc6-48c0b274abac"
+                  }
+                },
+                "行の更新": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "@triggerBody()?['text_4']",
+                      "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                      "item": "@outputs('詳細データ管理テーブル登録用(Failed)')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runAfter": {
+                    "詳細データ管理テーブル登録用(Failed)": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Skipped",
+                      "Failed"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "エラー箇所の解析": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9fe62fa1-b234-4e87-97f5-09b50a85f34d"
+              }
+            },
+            "エラー情報連携用": {
+              "type": "Compose",
+              "inputs": {
+                "flowId": "@{workflow().name}",
+                "flowName": "@{variables('フローの名前')}",
+                "errorTimestamp": "@{convertTimeZone(utcNow(), 'UTC', 'Tokyo Standard Time', 'yyyy-MM-dd HH:mm:ss')}",
+                "promptName": "",
+                "errorDetail": "@{string(result('Try'))}",
+                "failedAction": "@{variables('failedActionName')}",
+                "errorCode": "@{variables('failedErrorCode')}",
+                "errorMessage": "@{variables('failedErrorMessage')}"
+              },
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              }
+            },
+            "エラー箇所の解析": {
+              "type": "Foreach",
+              "foreach": "@result('Try')",
+              "actions": {
+                "条件_1": {
+                  "type": "If",
+                  "expression": {
+                    "or": [
+                      {
+                        "equals": [
+                          "@item()?['status']",
+                          "Failed"
+                        ]
+                      },
+                      {
+                        "equals": [
+                          "@item()?['status']",
+                          "Skipped"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "failedActionNameの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedActionName",
+                        "value": "@item()?['name']"
+                      }
+                    },
+                    "failedErrorCodeの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedErrorCode",
+                        "value": "@item()?['error']?['code']"
+                      },
+                      "runAfter": {
+                        "failedActionNameの設定": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "failedErrorMessageの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedErrorMessage",
+                        "value": "@item()?['error']?['message']"
+                      },
+                      "runAfter": {
+                        "failedErrorCodeの設定": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d8b86eee-6459-4b01-ba4a-1c74dea764a7"
+          }
+        },
+        "AI実行結果ログを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AI実行結果ログ",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "フロー名の設定": [
+              "Succeeded"
+            ]
+          }
+        },
+        "一次チェック回復結果を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "一次チェック回復結果",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "書類確認チェック結果を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "フロー名の設定": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "フローの名前",
+                "type": "string",
+                "value": "【修正中】F-05-004_項目補正-漢字回復処理"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "子フローの実行ステータスを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "子フローの実行ステータス",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "一次チェック回復結果を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "エラー情報を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "エラー情報",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "子フローの実行ステータスを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedActionNameを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedActionName",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "エラー情報を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedErrorCodeを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedErrorCode",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "failedActionNameを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedErrorMessageを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "failedErrorCodeを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "変数を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ATLAS既契約データ",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "登録IDを初期化する": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

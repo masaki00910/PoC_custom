@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{e5ab0985-8d01-f111-8406-002248ef6599}'
+  '@Name': 【開発用】Aflac住所マスタ取り込みフロー
+  JsonFileName: /modernflows/e5ab0985-8d01-f111-8406-002248ef6599/Aflac-E5AB0985-8D01-F111-8406-002248EF6599.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【開発用】Aflac住所マスタ取り込みフロー

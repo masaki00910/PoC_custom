@@ -1,0 +1,303 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "accountName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "checkStage",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_6": {
+                  "description": "入力を指定してください",
+                  "title": "status",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "ca_document_importid",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "boolean": {
+                  "description": "[はい] または [いいえ] を選択してください",
+                  "title": "checkResult",
+                  "type": "boolean",
+                  "x-ms-content-hint": "BOOLEAN",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "入力を指定してください",
+                  "title": "エラーリスト管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_6",
+                "text_2",
+                "boolean",
+                "text_3"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "変数の初期化：message": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "message",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "Current_time": {
+              "type": "Expression",
+              "kind": "CurrentTime",
+              "inputs": {}
+            },
+            "スイッチ": {
+              "type": "Switch",
+              "expression": "@triggerBody()?['text_1']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "Case 4": {
+                  "actions": {
+                    "行の更新：エラーリスト管理（二次チェック）": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@triggerBody()?['text_3']",
+                          "recordId": "@triggerBody()?['text_2']",
+                          "item": "@outputs('エラーリスト管理テーブル更新用（二次チェック）')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "エラーリスト管理テーブル更新用（二次チェック）": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    },
+                    "エラーリスト管理テーブル更新用（二次チェック）": {
+                      "type": "Compose",
+                      "inputs": {
+                        "ca_status_updated_datetime": "@{body('Current_time')}",
+                        "ca_2nd_check_result": "@{triggerBody()?['boolean']}",
+                        "ca_2nd_check_reviewer": "@{triggerBody()?['text']}",
+                        "ca_2nd_check_completed_datetime": "@{body('Current_time')}",
+                        "ca_processing_status": "@{triggerBody()?['text_6']}"
+                      }
+                    }
+                  },
+                  "case": "二次チェック"
+                },
+                "Case 5": {
+                  "actions": {
+                    "行の更新：エラーリスト管理（三次チェック）": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@triggerBody()?['text_3']",
+                          "recordId": "@triggerBody()?['text_2']",
+                          "item": "@outputs('エラーリスト管理テーブル更新用（三次チェック）')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "エラーリスト管理テーブル更新用（三次チェック）": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    },
+                    "エラーリスト管理テーブル更新用（三次チェック）": {
+                      "type": "Compose",
+                      "inputs": {
+                        "ca_status_updated_datetime": "@{body('Current_time')}",
+                        "ca_3rd_check_result": "@{triggerBody()?['boolean']}",
+                        "ca_3rd_check_reviewer": "@{triggerBody()?['text']}",
+                        "ca_3rd_check_completed_datetime": "@{body('Current_time')}",
+                        "ca_processing_status": "@{triggerBody()?['text_6']}"
+                      }
+                    }
+                  },
+                  "case": "三次チェック"
+                }
+              },
+              "runAfter": {
+                "Current_time": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "正常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "title": "message",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "message": "登録が完了しました！",
+                  "status": "Success",
+                  "errorresult": "N/A"
+                }
+              },
+              "runAfter": {
+                "スイッチ": [
+                  "SUCCEEDED"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "変数の初期化：message": [
+              "SUCCEEDED"
+            ]
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "title": "message",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "message": "N/A",
+                  "status": "Failed",
+                  "errorresult": "@{result('Try')}"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TIMEDOUT",
+              "SKIPPED",
+              "FAILED"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,27 @@
+Workflow:
+  '@WorkflowId': '{f1bddb65-74c3-f011-bbd3-002248049352}'
+  '@Name': ビジネスプロセス制御フロー
+  JsonFileName: /modernflows/f1bddb65-74c3-f011-bbd3-002248049352/-F1BDDB65-74C3-F011-BBD3-002248049352.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.1.0.34
+  IsCustomizable: 1
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': ビジネスプロセス制御フロー

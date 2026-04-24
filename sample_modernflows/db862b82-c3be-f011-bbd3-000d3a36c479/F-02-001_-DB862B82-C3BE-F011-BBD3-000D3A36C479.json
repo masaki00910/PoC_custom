@@ -1,0 +1,371 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "行が追加、変更、または削除された場合": {
+          "metadata": {
+            "operationMetadataId": "9a29ef49-5ba6-49a9-84bd-a9f371f7384b"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "cre00_import_item",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "cre00_importstatus",
+              "subscriptionRequest/filterexpression": "cre00_importstatus eq '新規作成'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "actions": {
+            "書類取込テーブルに行を登録する": {
+              "runAfter": {
+                "書類取込テーブル登録用": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3379a1a3-dfb1-41ef-925f-15a1eb448c68"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_document_imports",
+                  "item": "@outputs('書類取込テーブル登録用')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "書類取込テーブル登録用": {
+              "runAfter": {
+                "インポート管理テーブル行の更新(書類取込中)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "b8c676c7-4078-4203-b199-32b86242a1ab"
+              },
+              "type": "Compose",
+              "inputs": {
+                "ca_vouchertype": 2,
+                "ca_reportstatus": "0",
+                "ca_import_date": "@{formatDateTime(convertFromUtc(utcNow(), 'Tokyo Standard Time'), 'yyyy-MM-ddTHH:mm:ss')}",
+                "ca_from_name": "@{triggerOutputs()?['body/cre00_document_name']}",
+                "ca_document_url": "@{triggerOutputs()?['body/cre00_document_url']}",
+                "ca_document_id_ca_document_selection@odata.bind": "ca_document_selections(@{triggerOutputs()?['body/cre00_document_selectionid']})",
+                "ca_contactperson@odata.bind": "systemusers(@{triggerOutputs()?['body/cre00_userid']})"
+              }
+            },
+            "インポート管理テーブル行の更新(書類取込中)": {
+              "runAfter": {
+                "インポート管理テーブル登録用(書類取込中)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "30e39d47-4f9d-49f2-9532-fe10e0adc5df"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('インポート管理テーブル')",
+                  "recordId": "@triggerOutputs()?['body/cre00_import_itemid']",
+                  "item": "@outputs('インポート管理テーブル登録用(書類取込中)')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "インポート管理テーブル行の更新(書類取込完了)": {
+              "runAfter": {
+                "インポート管理テーブル登録用(書類取込完了)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "fdbfaf5b-7a23-4d1c-97ad-36e2085b38df"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('インポート管理テーブル')",
+                  "recordId": "@triggerOutputs()?['body/cre00_import_itemid']",
+                  "item": "@outputs('インポート管理テーブル登録用(書類取込完了)')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "登録IDに追加": {
+              "runAfter": {
+                "書類取込テーブルに行を登録する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "dea56929-b447-468d-95e5-6cd984839bb3"
+              },
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "登録ID",
+                "value": "@outputs('書類取込テーブルに行を登録する')?['body/ca_document_importid']"
+              }
+            },
+            "インポート管理テーブル登録用(書類取込中)": {
+              "metadata": {
+                "operationMetadataId": "49f66107-e852-49cf-a0ee-1465cfe9200c"
+              },
+              "type": "Compose",
+              "inputs": {
+                "cre00_importstatus": "書類取込中"
+              }
+            },
+            "インポート管理テーブル登録用(書類取込完了)": {
+              "runAfter": {
+                "登録IDに追加": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "87786f57-87e6-4675-8971-5e139b8cca1b"
+              },
+              "type": "Compose",
+              "inputs": {
+                "cre00_importstatus": "書類取込完了",
+                "cre00_document_item_id": "@{outputs('書類取込テーブルに行を登録する')?['body/ca_formid']}",
+                "cre00_documentid": "@{outputs('書類取込テーブルに行を登録する')?['body/ca_document_importid']}"
+              }
+            }
+          },
+          "runAfter": {
+            "登録IDを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "79d9f8d4-ff2a-4b3c-a5a6-5c0801b32c36"
+          },
+          "type": "Scope"
+        },
+        "Catch": {
+          "actions": {
+            "ロールバック処理": {
+              "actions": {
+                "書類取込を削除": {
+                  "foreach": "@variables('登録ID')",
+                  "actions": {
+                    "行を削除する(書類取込で登録行を削除)": {
+                      "metadata": {
+                        "operationMetadataId": "d46d3528-b114-4fe6-85a9-2662eec8dc74"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@variables('書類取込テーブル')",
+                          "recordId": "@items('書類取込を削除')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "インポート管理テーブル行の更新(書類取込エラー)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0acc1e17-2850-45e8-90d8-380867f82899"
+                  },
+                  "type": "Foreach"
+                },
+                "インポート管理テーブル登録用(書類取込エラー)": {
+                  "metadata": {
+                    "operationMetadataId": "7ac465f0-4b54-4433-9a16-925ba3f61a90"
+                  },
+                  "type": "Compose",
+                  "inputs": {
+                    "cre00_importstatus": "書類取込エラー"
+                  }
+                },
+                "インポート管理テーブル行の更新(書類取込エラー)": {
+                  "runAfter": {
+                    "インポート管理テーブル登録用(書類取込エラー)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a2043024-ecbf-4b66-a332-c46d23e1299f"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "@variables('インポート管理テーブル')",
+                      "recordId": "@triggerOutputs()?['body/cre00_import_itemid']",
+                      "item": "@outputs('インポート管理テーブル登録用(書類取込エラー)')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "5e8df2e6-9e81-4a35-b4bd-d15250231940"
+              },
+              "type": "Scope"
+            },
+            "異常終了": {
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded",
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "50081353-5399-476b-8d59-791f6f7cc2c7"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            },
+            "通知処理": {
+              "actions": {},
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e7a0a5bc-bfc7-48b8-9727-ff66093ccb90"
+              },
+              "type": "Scope"
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0328ce6e-0131-4b06-aa23-3c17adbaee35"
+          },
+          "type": "Scope"
+        },
+        "インポート管理テーブルを初期化する": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "b8f2fda3-7af1-46be-b7fb-964e65b61592"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "インポート管理テーブル",
+                "type": "string",
+                "value": "cre00_import_items"
+              }
+            ]
+          }
+        },
+        "書類取込テーブルを初期化する": {
+          "runAfter": {
+            "インポート管理テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00e4cf75-16f5-4875-a38d-7f3915a7d42f"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "書類取込テーブル",
+                "type": "string",
+                "value": "ca_document_imports"
+              }
+            ]
+          }
+        },
+        "登録IDを初期化する": {
+          "runAfter": {
+            "書類取込テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9e022d72-1e97-43d2-8c2a-c21be234c75c"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "登録ID",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

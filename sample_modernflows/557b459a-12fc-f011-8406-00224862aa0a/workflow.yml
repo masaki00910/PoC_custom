@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{557b459a-12fc-f011-8406-00224862aa0a}'
+  '@Name': 【開発用】登録データ取り込みフロー
+  JsonFileName: /modernflows/557b459a-12fc-f011-8406-00224862aa0a/-557B459A-12FC-F011-8406-00224862AA0A.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 0
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': 【開発用】登録データ取り込みフロー

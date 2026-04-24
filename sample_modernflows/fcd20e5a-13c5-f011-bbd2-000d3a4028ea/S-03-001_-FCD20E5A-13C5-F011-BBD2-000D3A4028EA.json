@@ -1,0 +1,787 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_65d68"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_155c9"
+        },
+        "runtimeSource": "invoker"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "入力を指定してください",
+                  "title": "list",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "number": {
+                  "description": "数値を入力してください",
+                  "title": "targetNumber",
+                  "type": "number",
+                  "x-ms-content-hint": "NUMBER",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "入力を指定してください",
+                  "title": "businessType",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "入力を指定してください",
+                  "title": "sharepointAddress",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "入力を指定してください",
+                  "title": "sharepintLibraryName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "入力を指定してください",
+                  "title": "エラーリスト管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_5": {
+                  "description": "入力を指定してください",
+                  "title": "詳細データ管理",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "number",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "変数の初期化：varFieldIdArray": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFieldIdArray",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "変数の初期化：varPolicyNumber": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPolicyNumber",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：varFieldIdArray": [
+              "Succeeded"
+            ]
+          }
+        },
+        "変数を初期化：varSharepointUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSharepointUrl",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "変数の初期化：varPolicyNumber": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "Parse_JSON": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['text']",
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "no": {
+                        "type": "integer"
+                      },
+                      "policy_number": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "For_each": {
+              "type": "Foreach",
+              "foreach": "@outputs('Parse_JSON')['body']",
+              "actions": {
+                "証券番号抽出": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('For_each')?['no']",
+                          "@triggerBody()?['number']"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "変数の設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varPolicyNumber",
+                        "value": "@items('For_each')?['policy_number']"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "Parse_JSON": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "行を一覧にする：詳細データ管理": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_5']",
+                  "fetchXml": "<fetch>\n  <entity name=\"ca_document_item\">\n    <attribute name=\"ca_document_id\" />\n    <attribute name=\"ca_policy_number\" />\n    <attribute name=\"ca_error_flag\" />\n    <attribute name=\"ca_field_id\" />\n    <attribute name=\"ca_document_value\" />\n    <attribute name=\"ca_1st_check_result\" />\n    <attribute name=\"ca_1st_check_recovery_value\" />\n    <attribute name=\"ca_1st_check_recovery_reason\" />\n    <attribute name=\"ca_2nd_check_recovery_value\" />\n    <attribute name=\"ca_2nd_check_recovery_reason\" />\n    <filter type=\"and\">\n      <condition attribute=\"ca_policy_number\" operator=\"eq\" value=\"@{variables('varPolicyNumber')}\" />\n    </filter>\n    <link-entity name=\"ca_error_list_item_master\" \n                 from=\"ca_error_list_item_masterid\" \n                 to=\"ca_field_id\" \n                 link-type=\"inner\" \n                 alias=\"em\">\n　　　<attribute name=\"ca_field_name\" />\n　　    <attribute name=\"ca_attribute\" />\n      <filter>\n        <condition attribute=\"ca_error_type\" operator=\"eq\" value=\"@{triggerBody()?['text_1']}\" />\n      </filter>\n    </link-entity>\n  </entity>\n</fetch>",
+                  "$top": 5000
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "For_each": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "行を一覧にする：エラーリスト管理": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@triggerBody()?['text_4']",
+                  "$filter": "ca_formid eq '@{first(outputs('行を一覧にする：詳細データ管理')?['body/value'])?['_ca_document_id_value@OData.Community.Display.V1.FormattedValue']\r\n}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "行を一覧にする：詳細データ管理": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "SharepointURLの取得": {
+              "type": "Foreach",
+              "foreach": "@outputs('行を一覧にする：エラーリスト管理')?['body/value']",
+              "actions": {
+                "ファイルの取得_(プロパティのみ)": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "@triggerBody()?['text_2']",
+                      "table": "@triggerBody()?['text_3']",
+                      "folderPath": "@first(outputs('行を一覧にする：エラーリスト管理')?['body/value'])?['ca_document_url']\r\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "GetFileItems",
+                      "connectionName": "shared_sharepointonline"
+                    }
+                  }
+                },
+                "変数の設定：varSharepointUrl": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varSharepointUrl",
+                    "value": "@substring(first(body('ファイルの取得_(プロパティのみ)')?['value'])?['{Link}'], 0, lastIndexOf(first(body('ファイルの取得_(プロパティのみ)')?['value'])?['{Link}'], '/'))"
+                  },
+                  "runAfter": {
+                    "ファイルの取得_(プロパティのみ)": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "行を一覧にする：エラーリスト管理": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "Loop：詳細データ管理": {
+              "type": "Foreach",
+              "foreach": "@body('属性の空文字削除')",
+              "actions": {
+                "業務種別判定": {
+                  "type": "Switch",
+                  "expression": "@triggerBody()?['text_1']",
+                  "default": {
+                    "actions": {}
+                  },
+                  "cases": {
+                    "漢字": {
+                      "actions": {
+                        "漢字：回復対象チェック": {
+                          "type": "If",
+                          "expression": {
+                            "or": [
+                              {
+                                "equals": [
+                                  "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                  "契約者名（漢字）"
+                                ]
+                              },
+                              {
+                                "equals": [
+                                  "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                  "被保険者氏名（漢字）"
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "漢字：回復対象": {
+                              "type": "Compose",
+                              "inputs": [
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "original",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_document_value']), '', items('Loop：詳細データ管理')?['ca_document_value'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "first_recovery",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_回復結果",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_value']), '', items('Loop：詳細データ管理')?['ca_1st_check_recovery_value'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "first_recovery",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_回復理由",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_reason']), '', items('Loop：詳細データ管理')?['ca_1st_check_recovery_reason'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "second_recovery",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_再回復結果",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_value']), '', items('Loop：詳細データ管理')?['ca_2nd_check_recovery_value'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "second_recovery",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_再回復理由",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_reason']), '', items('Loop：詳細データ管理')?['ca_2nd_check_recovery_reason'])}"
+                                }
+                              ]
+                            },
+                            "漢字回復対象：配列変数に追加": {
+                              "type": "Foreach",
+                              "foreach": "@outputs('漢字：回復対象')",
+                              "actions": {
+                                "配列変数に追加_1": {
+                                  "type": "AppendToArrayVariable",
+                                  "inputs": {
+                                    "name": "varFieldIdArray",
+                                    "value": "@items('漢字回復対象：配列変数に追加')"
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "漢字：回復対象": [
+                                  "Succeeded"
+                                ]
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "漢字：表示対象チェック": {
+                                "type": "If",
+                                "expression": {
+                                  "or": [
+                                    {
+                                      "equals": [
+                                        "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                        "契約者名"
+                                      ]
+                                    },
+                                    {
+                                      "equals": [
+                                        "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                        "被保険者名.カナ"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "actions": {
+                                  "漢字：表示対象": {
+                                    "type": "Compose",
+                                    "inputs": {
+                                      "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                      "section": "original",
+                                      "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                      "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}",
+                                      "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_document_value']), '', items('Loop：詳細データ管理')?['ca_document_value'])}"
+                                    }
+                                  },
+                                  "漢字表示対象：配列変数に追加": {
+                                    "type": "AppendToArrayVariable",
+                                    "inputs": {
+                                      "name": "varFieldIdArray",
+                                      "value": "@outputs('漢字：表示対象')"
+                                    },
+                                    "runAfter": {
+                                      "漢字：表示対象": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "case": "漢字"
+                    },
+                    "住所": {
+                      "actions": {
+                        "住所：回復対象チェック": {
+                          "type": "If",
+                          "expression": {
+                            "or": [
+                              {
+                                "equals": [
+                                  "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                  "契〒"
+                                ]
+                              },
+                              {
+                                "equals": [
+                                  "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                  "契住所"
+                                ]
+                              },
+                              {
+                                "equals": [
+                                  "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                  "被〒"
+                                ]
+                              },
+                              {
+                                "equals": [
+                                  "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                  "被住所"
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "住所：回復対象": {
+                              "type": "Compose",
+                              "inputs": [
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "original",
+                                  "check_result": "@{items('Loop：詳細データ管理')?['ca_1st_check_result']}",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_document_value']), '', items('Loop：詳細データ管理')?['ca_document_value'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "first_recovery",
+                                  "check_result": "@{items('Loop：詳細データ管理')?['ca_1st_check_result']}",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_回復結果",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_value']), '', items('Loop：詳細データ管理')?['ca_1st_check_recovery_value'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "first_recovery",
+                                  "check_result": "@{items('Loop：詳細データ管理')?['ca_1st_check_result']}",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_回復理由",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_reason']), '', items('Loop：詳細データ管理')?['ca_1st_check_recovery_reason'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "second_recovery",
+                                  "check_result": "",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_再回復結果",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_value']), '', items('Loop：詳細データ管理')?['ca_2nd_check_recovery_value'])}"
+                                },
+                                {
+                                  "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                  "section": "second_recovery",
+                                  "check_result": "",
+                                  "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                  "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}_再回復理由",
+                                  "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_1st_check_recovery_reason']), '', items('Loop：詳細データ管理')?['ca_2nd_check_recovery_reason'])}"
+                                }
+                              ]
+                            },
+                            "変数の設定_1": {
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "varFieldIdArray",
+                                "value": "@outputs('作成')"
+                              },
+                              "runAfter": {
+                                "作成": [
+                                  "SUCCEEDED"
+                                ]
+                              }
+                            },
+                            "作成": {
+                              "type": "Compose",
+                              "inputs": "@union(variables('varFieldIdArray'), outputs('住所：回復対象'))",
+                              "runAfter": {
+                                "住所：回復対象": [
+                                  "Succeeded"
+                                ]
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "住所：表示対象チェック": {
+                                "type": "If",
+                                "expression": {
+                                  "or": [
+                                    {
+                                      "equals": [
+                                        "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                        "契約者名"
+                                      ]
+                                    },
+                                    {
+                                      "equals": [
+                                        "@items('Loop：詳細データ管理')?['em.ca_field_name']",
+                                        "第一被名"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "actions": {
+                                  "住所：表示対象": {
+                                    "type": "Compose",
+                                    "inputs": {
+                                      "attribute": "@{items('Loop：詳細データ管理')?['em.ca_attribute']}",
+                                      "section": "original",
+                                      "check_result": "@{items('Loop：詳細データ管理')?['ca_1st_check_result']}",
+                                      "error_flag": "@{items('Loop：詳細データ管理')?['ca_error_flag']}",
+                                      "title": "@{items('Loop：詳細データ管理')?['em.ca_field_name']}",
+                                      "value": "@{if(empty(items('Loop：詳細データ管理')?['ca_document_value']), '', items('Loop：詳細データ管理')?['ca_document_value'])}"
+                                    }
+                                  },
+                                  "作成_1": {
+                                    "type": "Compose",
+                                    "inputs": "@union(variables('varFieldIdArray'), createArray(outputs('住所：表示対象')))",
+                                    "runAfter": {
+                                      "住所：表示対象": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  },
+                                  "変数の設定_2": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "varFieldIdArray",
+                                      "value": "@outputs('作成_1')"
+                                    },
+                                    "runAfter": {
+                                      "作成_1": [
+                                        "SUCCEEDED"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "case": "住所"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "属性の空文字削除": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "正常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "policynumber": {
+                      "title": "policyNumber",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "recoverylist": {
+                      "title": "recoveryList",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "url": {
+                      "title": "url",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "cadocumentimportid": {
+                      "title": "caDocumentImportId",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "policynumber": "@{variables('varPolicyNumber')}",
+                  "recoverylist": "@{variables('varFieldIdArray')}",
+                  "url": "@{variables('varSharepointUrl')}",
+                  "cadocumentimportid": "@{first(outputs('行を一覧にする：エラーリスト管理')?['body/value'])?['ca_document_importid']}",
+                  "status": "Success",
+                  "errorresult": "N/A"
+                }
+              },
+              "runAfter": {
+                "Loop：詳細データ管理": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "属性のnull削除": {
+              "type": "Query",
+              "inputs": {
+                "from": "@outputs('行を一覧にする：詳細データ管理')?['body/value']",
+                "where": "@not(equals(item()?['em.ca_attribute'],null))"
+              },
+              "runAfter": {
+                "SharepointURLの取得": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "属性の空文字削除": {
+              "type": "Query",
+              "inputs": {
+                "from": "@body('属性のnull削除')",
+                "where": "@not(equals(item()?['em.ca_attribute'],''))"
+              },
+              "runAfter": {
+                "属性のnull削除": [
+                  "SUCCEEDED"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "変数を初期化：varSharepointUrl": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了": {
+              "type": "Response",
+              "kind": "Skills",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "policynumber": {
+                      "title": "policyNumber",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "recoverylist": {
+                      "title": "recoveryList",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "url": {
+                      "title": "url",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "cadocumentimportid": {
+                      "title": "caDocumentImportId",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "status": {
+                      "title": "status",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorresult": {
+                      "title": "errorResult",
+                      "description": "",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "policynumber": "N/A",
+                  "recoverylist": "N/A",
+                  "url": "N/A",
+                  "cadocumentimportid": "N/A",
+                  "status": "Failed",
+                  "errorresult": "@{result('Try')}"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TIMEDOUT",
+              "SKIPPED",
+              "FAILED"
+            ]
+          }
+        }
+      },
+      "outputs": {},
+      "description": "このフローは、入力パラメーターを必要とせずにトリガーされます。起動するとすぐに、成功を示すステータスコードを含む応答を送信します。応答には追加のデータやプロパティは含まれていません。基本的に、フローがトリガーされ正常に完了したことを確認するシンプルな確認メカニズムとして機能しますが、特定の情報を処理したり返したりすることはありません。"
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

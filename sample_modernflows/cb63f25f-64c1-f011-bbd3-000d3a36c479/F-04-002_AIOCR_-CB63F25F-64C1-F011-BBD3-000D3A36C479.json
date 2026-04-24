@@ -1,0 +1,836 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_00509"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_2c706"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_commondataserviceforapps-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "ca_sharedcommondataserviceforapps_69184"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://ts.accenture.com/sites/TfLSDigitalDelivery",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "fd88122e-9d87-4f4a-9d70-70daee6b6524"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "payload情報を連携する",
+                  "title": "payload",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "actions": {
+            "JSON_の解析(親フローからの情報を解析)": {
+              "metadata": {
+                "operationMetadataId": "150be0c3-553e-49ba-b22f-ffb63f487407"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@json(triggerBody()?['text'])",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "fileIdentifier": {
+                      "type": "string"
+                    },
+                    "aiConfigValue": {
+                      "type": "string"
+                    },
+                    "documentImportRecordId": {
+                      "type": "string"
+                    },
+                    "documentType": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "ファイル_コンテンツの取得": {
+              "runAfter": {
+                "JSON_の解析(親フローからの情報を解析)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5072b9ab-3da0-4ce8-8b60-e16c5f920eb5"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                  "id": "@body('JSON_の解析(親フローからの情報を解析)')?['fileIdentifier']",
+                  "inferContentType": true
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GetFileContent",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              }
+            },
+            "ページごとに処理を実施": {
+              "foreach": "@outputs('画像やドキュメントのテキストを認識する(帳票読取)')?['body/responsev2/predictionOutput/results']",
+              "actions": {
+                "プロンプトを実行する": {
+                  "runAfter": {
+                    "プロンプト用(stringに変換)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "99cbe42d-6954-49ff-8696-6bd3850294f1",
+                    "flowSystemMetadata": {
+                      "portalOperationApiDisplayNameOverride": "AI Builder",
+                      "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                      "portalOperationBrandColorOverride": "#0A76C4",
+                      "portalOperationApiTierOverride": "Standard"
+                    }
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "recordId": "a5cd656e-4f0c-4b52-8359-96a2f2b1a186",
+                      "item/requestv2/_30b5_30f3_30d7_30eb_30c7_30fc_30bf": "@outputs('ID_で行を取得する(コード管理テーブルからプロンプトを取得)')?['body/ca_additionalinfo']",
+                      "item/requestv2/_30d7_30ed_30f3_30d7_30c8": "@outputs('ID_で行を取得する(コード管理テーブルからプロンプトを取得)')?['body/ca_contents']",
+                      "item/requestv2/_5165_529b_30c7_30fc_30bf": "@outputs('プロンプト用(stringに変換)')"
+                    },
+                    "host": {
+                      "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                      "operationId": "aibuilderpredict_customprompt",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                },
+                "JSON_の解析(解析結果)": {
+                  "runAfter": {
+                    "プロンプトを実行する": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "39a5f68b-a5a1-46a5-8320-054fe7a50860"
+                  },
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@outputs('プロンプトを実行する')?['body/responsev2/predictionOutput/text']",
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "item": {
+                                "type": "object",
+                                "properties": {
+                                  "value": {
+                                    "type": "string"
+                                  },
+                                  "height": {
+                                    "type": "number"
+                                  },
+                                  "left": {
+                                    "type": "number"
+                                  },
+                                  "top": {
+                                    "type": "number"
+                                  },
+                                  "width": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "value",
+                                  "height",
+                                  "left",
+                                  "top",
+                                  "width"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "item"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "result"
+                      ]
+                    }
+                  }
+                },
+                "変数の値を増やす(ページ数)": {
+                  "metadata": {
+                    "operationMetadataId": "3574df03-6ce6-4a01-9bc3-a6f5e3470924"
+                  },
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "pageindex",
+                    "value": 1
+                  }
+                },
+                "選択": {
+                  "runAfter": {
+                    "変数の値を増やす(ページ数)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "755139d3-6959-4aad-b1f2-4bcd2d43dfe5"
+                  },
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@items('ページごとに処理を実施')?['lines']",
+                    "select": {
+                      "text": "@item()?['text']",
+                      "left": "@item()?['boundingBox/left']",
+                      "top": "@item()?['boundingBox/top']",
+                      "width": "@item()?['boundingBox/width']",
+                      "height": "@item()?['boundingBox/height']"
+                    }
+                  }
+                },
+                "プロンプト用(stringに変換)": {
+                  "runAfter": {
+                    "読取項目ごとに処理を実施": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "63b3643f-838d-4892-a3b7-5f79a7609b95"
+                  },
+                  "type": "Compose",
+                  "inputs": "@string(variables('jsonArray'))"
+                },
+                "読取項目ごとに処理を実施": {
+                  "foreach": "@body('JSON_の解析(選択)')",
+                  "actions": {
+                    "配列変数に追加(項目分析用)": {
+                      "runAfter": {
+                        "項目分析用": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "38682012-16d7-4e58-b051-f0bc4d7f2438"
+                      },
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "jsonArray",
+                        "value": "@outputs('項目分析用')"
+                      }
+                    },
+                    "項目分析用": {
+                      "metadata": {
+                        "operationMetadataId": "4d1f6b75-db09-4220-9df1-1d8939aa7d1c"
+                      },
+                      "type": "Compose",
+                      "inputs": {
+                        "odataId": "@{outputs('ID_で行を取得する(コード管理テーブルからプロンプトを取得)')?['body/@odata.id']}",
+                        "text": "@{item()?['text']}",
+                        "height": "@item()?['height']",
+                        "left": "@item()?['left']",
+                        "top": "@item()?['top']",
+                        "width": "@item()?['width']"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "JSON_の解析(選択)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0dc2712a-fe61-4b37-9dd7-afe64413c797"
+                  },
+                  "type": "Foreach"
+                },
+                "JSON_の解析(選択)": {
+                  "runAfter": {
+                    "選択": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "7669407e-523e-4d1a-8ab1-a49d6740138a"
+                  },
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@body('選択')",
+                    "schema": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "left": {
+                            "type": "number"
+                          },
+                          "top": {
+                            "type": "number"
+                          },
+                          "width": {
+                            "type": "number"
+                          },
+                          "height": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "left",
+                          "top",
+                          "width",
+                          "height"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "解析結果毎に処理を実施": {
+                  "foreach": "@body('JSON_の解析(解析結果)')['result']",
+                  "actions": {
+                    "新しい行を追加する(AIOCR読取結果)": {
+                      "runAfter": {
+                        "AIOCR読取テーブル登録用": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "54d99859-584f-43e7-afba-4d7123fd51ec"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@variables('AIOCR読取結果テーブル')",
+                          "item": "@outputs('AIOCR読取テーブル登録用')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      }
+                    },
+                    "登録IDに追加": {
+                      "runAfter": {
+                        "新しい行を追加する(AIOCR読取結果)": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d4f5fa0d-586f-4694-ba81-76f9773090c1"
+                      },
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "登録ID",
+                        "value": "@outputs('新しい行を追加する(AIOCR読取結果)')?['body/ca_document_itemid']"
+                      }
+                    },
+                    "AIOCR読取テーブル登録用": {
+                      "runAfter": {
+                        "帳票項目のソート順があるか？": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "74377822-86e7-4da3-9ce8-915f05627500"
+                      },
+                      "type": "Compose",
+                      "inputs": {
+                        "ca_document_id@odata.bind": "ca_document_imports(@{body('JSON_の解析(親フローからの情報を解析)')?['documentImportRecordId']})",
+                        "ca_document_item": "@{items('解析結果毎に処理を実施')['key']}",
+                        "ca_document_value": "@{items('解析結果毎に処理を実施')['item']['value']}",
+                        "ca_height": "@{items('解析結果毎に処理を実施')['item']['height']}",
+                        "ca_left": "@{items('解析結果毎に処理を実施')['item']['left']}",
+                        "ca_top": "@{items('解析結果毎に処理を実施')['item']['top']}",
+                        "ca_width": "@{items('解析結果毎に処理を実施')['item']['width']}",
+                        "cre00_page_count": "@variables('pageindex')",
+                        "cre00_sort": "@variables('ソート順')"
+                      }
+                    },
+                    "アレイのフィルター処理(帳票項目でフィルタ)": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('行を一覧にする(コード管理)')?['body/value']",
+                        "where": "@equals(item()?['ca_key'],items('解析結果毎に処理を実施')['key'])"
+                      }
+                    },
+                    "帳票項目のソート順があるか？": {
+                      "actions": {
+                        "ソート順の設定": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "ソート順",
+                            "value": "@first(body('アレイのフィルター処理(帳票項目でフィルタ)'))['ca_value']"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "アレイのフィルター処理(帳票項目でフィルタ)": [
+                          "Succeeded"
+                        ]
+                      },
+                      "else": {
+                        "actions": {
+                          "ソート順の設定(なし)": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "ソート順",
+                              "value": 99999
+                            }
+                          }
+                        }
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "greater": [
+                              "@length(body('アレイのフィルター処理(帳票項目でフィルタ)'))",
+                              0
+                            ]
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    }
+                  },
+                  "runAfter": {
+                    "JSON_の解析(解析結果)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "6813076e-a293-40d5-95b6-2b975faa30f1"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "画像やドキュメントのテキストを認識する(帳票読取)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e45e8970-84ae-45cf-8e68-acc641ceb1f8"
+              },
+              "type": "Foreach"
+            },
+            "ID_で行を取得する(コード管理テーブルからプロンプトを取得)": {
+              "runAfter": {
+                "ファイル_コンテンツの取得": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e280b6c2-5cf8-45ed-8ed6-a59795c77522"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('コード管理テーブル')",
+                  "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['aiConfigValue']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              }
+            },
+            "画像やドキュメントのテキストを認識する(帳票読取)": {
+              "runAfter": {
+                "行を一覧にする(コード管理)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "519f3bdd-4b78-4009-ad26-dfa57f7683ab",
+                "flowSystemMetadata": {
+                  "portalOperationApiDisplayNameOverride": "AI Builder",
+                  "portalOperationIconOverride": "https://content.powerapps.com/resource/makerx/static/pauto/images/designeroperations/aiBuilderNew.51dbdb6b.png",
+                  "portalOperationBrandColorOverride": "#0A76C4",
+                  "portalOperationApiTierOverride": "Standard"
+                }
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "item/requestv2/base64Encoded": "@body('ファイル_コンテンツの取得')"
+                },
+                "host": {
+                  "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                  "operationId": "aibuilderpredict_textrecognition",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "正常終了を通知": {
+              "runAfter": {
+                "ページごとに処理を実施": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "316931b1-97ee-4b56-945d-2884b301f478"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "pages": {
+                      "title": "pages",
+                      "x-ms-dynamically-added": true,
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Success",
+                  "pages": "@{variables('pageindex')}"
+                }
+              }
+            },
+            "行を一覧にする(コード管理)": {
+              "runAfter": {
+                "ID_で行を取得する(コード管理テーブルからプロンプトを取得)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_code_managements",
+                  "$filter": "ca_code_category eq '表示順' and ca_middle_code_name eq '@{body('JSON_の解析(親フローからの情報を解析)')?['documentType']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "ソート順を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9baa16d8-15be-4a50-90af-8eb4760cddb8"
+          },
+          "type": "Scope"
+        },
+        "Catch": {
+          "actions": {
+            "異常終了を通知": {
+              "runAfter": {
+                "通知処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "aaff0b81-4a4f-4d43-a79a-9364cfa07b48"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "pages": {
+                      "title": "pages",
+                      "x-ms-dynamically-added": true,
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed",
+                  "pages": "0"
+                }
+              }
+            },
+            "ロールバック処理": {
+              "actions": {
+                "AIOCR読取結果を削除": {
+                  "foreach": "@variables('登録ID')",
+                  "actions": {
+                    "行を削除する(AIOCR読取結果で登録行を削除)": {
+                      "metadata": {
+                        "operationMetadataId": "a6b37198-63e3-4bfa-a19b-52fbe35b43cf"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@variables('AIOCR読取結果テーブル')",
+                          "recordId": "@items('AIOCR読取結果を削除')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "982c71af-afa0-4c96-95b6-5d0cbbc15716"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "1972e610-0558-4f63-8e85-cf44dd3af674"
+              },
+              "type": "Scope"
+            },
+            "通知処理": {
+              "actions": {},
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c4b4df70-9bc4-4a6b-abdd-b344b7b90a0b"
+              },
+              "type": "Scope"
+            },
+            "異常終了": {
+              "runAfter": {
+                "異常終了を通知": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5e5be4be-fb7d-4491-81f3-5310f90be398"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "bb8b1d84-6336-44fa-bd45-0bd781d634f3"
+          },
+          "type": "Scope"
+        },
+        "AIOCR読取結果を初期化する": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "e5fa876b-3241-488c-a479-64140770ffe4"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AIOCR読取結果テーブル",
+                "type": "string",
+                "value": "ca_document_items"
+              }
+            ]
+          }
+        },
+        "登録IDを初期化する": {
+          "runAfter": {
+            "AIOCR読取結果を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7a664cd0-5d33-4a19-8cb3-c10dec6608b7"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "登録ID",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "コード管理テーブルを初期化する": {
+          "runAfter": {
+            "登録IDを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b00b6cbd-4bc2-441d-a286-b30db0745bcd"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "コード管理テーブル",
+                "type": "string",
+                "value": "ca_code_managements"
+              }
+            ]
+          }
+        },
+        "pageindexを初期化する": {
+          "runAfter": {
+            "コード管理テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "27ac20cd-a9bb-445c-8a45-6cea739cc23c"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "pageindex",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "jsonArrayを初期化する": {
+          "runAfter": {
+            "pageindexを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2dadfb3a-7b75-436f-ba72-21dc173d975e"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "jsonArray",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "ソート順を初期化する": {
+          "runAfter": {
+            "jsonArrayを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ソート順",
+                "type": "integer",
+                "value": 99999
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

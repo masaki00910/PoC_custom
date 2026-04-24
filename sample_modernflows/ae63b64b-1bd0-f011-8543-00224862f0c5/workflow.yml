@@ -1,0 +1,28 @@
+Workflow:
+  '@WorkflowId': '{ae63b64b-1bd0-f011-8543-00224862f0c5}'
+  '@Name': S-01-001_二次チェック差配
+  JsonFileName: /modernflows/ae63b64b-1bd0-f011-8543-00224862f0c5/S-01-001_-AE63B64B-1BD0-F011-8543-00224862F0C5.json
+  Type: 1
+  Subprocess: 0
+  Category: 5
+  Mode: 0
+  Scope: 4
+  OnDemand: 0
+  TriggerOnCreate: 0
+  TriggerOnDelete: 0
+  AsyncAutodelete: 0
+  SyncWorkflowLogOnFailure: 0
+  StateCode: 1
+  StatusCode: 2
+  RunAs: 1
+  IsTransacted: 1
+  IntroducedVersion: 1.0
+  IsCustomizable: 1
+  BusinessProcessType: 0
+  IsCustomProcessingStepAllowedForOtherPublishers: 1
+  ModernFlowType: 1
+  PrimaryEntity: none
+  LocalizedNames:
+    LocalizedName:
+      '@languagecode': 1041
+      '@description': S-01-001_二次チェック差配

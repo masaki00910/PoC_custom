@@ -1,0 +1,184 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_excelonlinebusiness": {
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_90ce9"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_c6193"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Import Share Point Site (ca_ImportSharePointSite)": {
+          "defaultValue": "https://stellar2026.sharepoint.com/sites/A_test",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ca_ImportSharePointSite"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "94875565-1bc2-4df8-b12a-ab8f26738212"
+          }
+        }
+      },
+      "actions": {
+        "表内に存在する行を一覧表示": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+              "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+              "file": "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG",
+              "table": "{00000000-000C-0000-FFFF-FFFF00000000}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "operationId": "GetItems",
+              "connectionName": "shared_excelonlinebusiness"
+            }
+          },
+          "runAfter": {},
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          },
+          "metadata": {
+            "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD": "/01_test/test/詳細データ管理テーブル.xlsx",
+            "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}",
+            "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG": "/01_test/test/AI個別検証用.xlsx"
+          }
+        },
+        "AI個別検証用データでループ": {
+          "type": "Foreach",
+          "foreach": "@outputs('表内に存在する行を一覧表示')?['body/value']",
+          "actions": {
+            "行の削除": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                  "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                  "file": "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG",
+                  "table": "{00000000-000C-0000-FFFF-FFFF00000000}",
+                  "idColumn": "AI個別検証用",
+                  "id": "@items('AI個別検証用データでループ')?['AI個別検証用']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                  "operationId": "DeleteItem",
+                  "connectionName": "shared_excelonlinebusiness"
+                }
+              },
+              "metadata": {
+                "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD": "/01_test/test/詳細データ管理テーブル.xlsx",
+                "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}",
+                "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG": "/01_test/test/AI個別検証用.xlsx"
+              }
+            }
+          },
+          "runAfter": {
+            "表内に存在する行を一覧表示": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AI個別検証用テーブルデータ": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "ca_ai_tests",
+              "$filter": "ca_test_perspective eq 'AI読み取り検証のみ' or ca_test_perspective eq 'AI住所漢字カナ一致検証のみ' or ca_test_perspective eq 'AI住所漢字カナ補完検証のみ'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "AI個別検証用データでループ": [
+              "Succeeded"
+            ]
+          }
+        },
+        "AI個別検証用データ毎に処理を実施する": {
+          "type": "Foreach",
+          "foreach": "@outputs('AI個別検証用テーブルデータ')?['body/value']",
+          "actions": {
+            "表に行を追加": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "source": "@parameters('Import Share Point Site (ca_ImportSharePointSite)')",
+                  "drive": "b!bmH6a0vhFkCfG98_LiiFzjaleRugULhOlEdqy0I8K2dYRBTqgdMNQ5C8fA0h6LCE",
+                  "file": "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG",
+                  "table": "{00000000-000C-0000-FFFF-FFFF00000000}",
+                  "item/証券番号": "@items('AI個別検証用データ毎に処理を実施する')?['ca_policy_number']",
+                  "item/検証観点": "@items('AI個別検証用データ毎に処理を実施する')?['ca_test_perspective']",
+                  "item/AI出力結果": "@items('AI個別検証用データ毎に処理を実施する')?['ca_ai_result']",
+                  "item/カナ": "@items('AI個別検証用データ毎に処理を実施する')?['ca_address_kana']",
+                  "item/漢字": "@items('AI個別検証用データ毎に処理を実施する')?['ca_address_kanji']",
+                  "item/申込書格納先": "@items('AI個別検証用データ毎に処理を実施する')?['ca_main_document_path']",
+                  "item/AI個別検証用": "@items('AI個別検証用データ毎に処理を実施する')?['ca_ai_testid']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+                  "operationId": "AddRowV2",
+                  "connectionName": "shared_excelonlinebusiness"
+                }
+              },
+              "metadata": {
+                "01S6JYSXPNEJNOGQRQLJDI26UHERYCXRAD": "/01_test/test/詳細データ管理テーブル.xlsx",
+                "tableId": "{00000000-000C-0000-FFFF-FFFF00000000}",
+                "01S6JYSXJRW6KXLDN6WVEJWXZZ3HBA23HG": "/01_test/test/AI個別検証用.xlsx"
+              }
+            }
+          },
+          "runAfter": {
+            "AI個別検証用テーブルデータ": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,132 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "payload情報を連携する",
+                  "title": "payload",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "",
+                  "title": "点検結果テーブル",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "94875565-1bc2-4df8-b12a-ab8f26738212"
+          }
+        }
+      },
+      "actions": {
+        "JSON_の解析(親フローからの情報を解析)": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@json(triggerBody()?['text'])",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ca_ai_inspection_details": {
+                  "type": "string"
+                },
+                "ca_document_item_id@odata.bind": {
+                  "type": "string"
+                },
+                "ca_prompt_id@odata.bind": {
+                  "type": "string"
+                },
+                "ca_document_item": {
+                  "type": "string"
+                },
+                "ca_inspection_details": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "4a8c8cc4-7229-44bb-b6cc-683566273bbf"
+          }
+        },
+        "新しい行を追加する(点検結果)": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "@triggerBody()?['text_1']",
+              "item": "@body('JSON_の解析(親フローからの情報を解析)')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "JSON_の解析(親フローからの情報を解析)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7403eb7a-8a46-4ab7-a79a-59f1f563fc88"
+          }
+        },
+        "応答": {
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 200,
+            "body": "@outputs('新しい行を追加する(点検結果)')?['body/ca_aiid']"
+          },
+          "runAfter": {
+            "新しい行を追加する(点検結果)": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

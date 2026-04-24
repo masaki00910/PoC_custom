@@ -1,0 +1,120 @@
+:root {
+  --navy-900: #1f2937;
+  --navy-800: #374151;
+  --navy-700: #4b5563;
+  --navy-600: #6b7280;
+  --navy-500: #9ca3af;
+  --navy-400: #d1d5db;
+  --navy-100: #f3f4f6;
+  --navy-50: #f9fafb;
+  --accent: #2563eb;
+  --accent-lt: #eff6ff;
+  --green: #16a34a;
+  --green-lt: #dcfce7;
+  --red: #dc2626;
+  --red-lt: #fee2e2;
+  --yellow: #d97706;
+  --yellow-lt: #fef3c7;
+  --gray: #6b7280;
+  --gray-lt: #f3f4f6;
+  --border: #e5e7eb;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+  background: #f3f4f6;
+  color: #1f2937;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#tweaks-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  background: #fff;
+  color: var(--navy-900);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 16px 20px;
+  width: 220px;
+  box-shadow: var(--shadow-md);
+  display: none;
+  font-size: 13px;
+}
+#tweaks-panel.visible {
+  display: block;
+}
+#tweaks-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  color: var(--gray);
+  font-size: 12px;
+}
+#tweaks-panel input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+#tweaks-panel select {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--gray-lt);
+  color: var(--navy-900);
+  font-size: 12px;
+}
+#tweaks-panel .tweak-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--navy-900);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}

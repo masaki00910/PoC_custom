@@ -1,0 +1,1038 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_a15b0"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "payload情報を連携する",
+                  "title": "payload",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "42208b91-12a9-4163-8cca-8029477c3b8f"
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "JSON_の解析(親フローからの情報を解析)": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@json(triggerBody()?['text'])",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "document_ImportRecordId": {
+                      "type": "string"
+                    },
+                    "document_item": {
+                      "type": "string"
+                    },
+                    "document_value": {
+                      "type": "string"
+                    },
+                    "document_selectionId": {
+                      "type": "string"
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "document_item_id": {
+                      "type": "string"
+                    },
+                    "document_id": {
+                      "type": "string"
+                    },
+                    "error_flag": {
+                      "type": "boolean"
+                    },
+                    "main_document_url": {
+                      "type": "string"
+                    },
+                    "sub_document_url": {
+                      "type": "string"
+                    },
+                    "error_type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "4a8c8cc4-7229-44bb-b6cc-683566273bbf"
+              }
+            },
+            "行を一覧にする(AIプロンプト)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "ca_ai_prompts",
+                  "$filter": "ca_condition eq '@{body('JSON_の解析(親フローからの情報を解析)')?['document_item']}' and ca_ai ne 1",
+                  "$orderby": "ca_processing_order"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "行の更新(詳細データ管理)-InProgress": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9869962b-bc57-4904-8555-9ed518fe3d9d"
+              }
+            },
+            "AIプロンプト毎に処理を実施する": {
+              "type": "Foreach",
+              "foreach": "@outputs('行を一覧にする(AIプロンプト)')?['body/value']",
+              "actions": {
+                "ナレッジ機能の有効化": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('AIプロンプト毎に処理を実施する')?['ca_knowledge']",
+                          true
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "ナレッジ機能(有効化)の設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ナレッジ機能",
+                        "value": "@body('JSON_の解析(親フローからの情報を解析)')?['document_id']"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "4c8ae976-82b4-4744-816c-37bd326923b8"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "ナレッジ機能(無効化)の設定": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ナレッジ機能",
+                          "value": "****knowledge無効***"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "2c5111ec-d329-4776-986e-74678f19ce42"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "プロンプト名の設定": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "722e52fe-67a7-42ee-81a8-bf0d11da66a1"
+                  }
+                },
+                "プロンプト名の設定": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "プロンプト名",
+                    "value": "@items('AIプロンプト毎に処理を実施する')?['ca_id']"
+                  }
+                },
+                "スイッチ": {
+                  "type": "Switch",
+                  "expression": "@body('JSON_の解析(親フローからの情報を解析)')?['error_type']",
+                  "default": {
+                    "actions": {}
+                  },
+                  "cases": {
+                    "漢字": {
+                      "actions": {
+                        "子フローの実行（漢字回復処理）": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "542e9e33-6cfa-f011-8406-002248f17ef0"
+                            },
+                            "body": {
+                              "text": "@string(body('JSON_の解析(親フローからの情報を解析)'))",
+                              "text_1": "@variables('プロンプト名')",
+                              "text_2": "@variables('ナレッジ機能')",
+                              "text_3": "@variables('点検結果テーブル')",
+                              "text_4": "@variables('詳細データ管理テーブル')",
+                              "text_5": "@string(outputs('AIプロンプト連携用'))"
+                            }
+                          }
+                        },
+                        "子フローの実行ステータスの設定": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "子フローの実行ステータス",
+                            "value": "@body('子フローの実行（漢字回復処理）')?['status']"
+                          },
+                          "runAfter": {
+                            "子フローの実行（漢字回復処理）": [
+                              "Succeeded"
+                            ]
+                          }
+                        },
+                        "エラー情報の設定": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "エラー情報",
+                            "value": "@body('子フローの実行（漢字回復処理）')?['errorinfo']"
+                          },
+                          "runAfter": {
+                            "子フローの実行ステータスの設定": [
+                              "Succeeded"
+                            ]
+                          }
+                        }
+                      },
+                      "case": "漢字"
+                    },
+                    "住所": {
+                      "actions": {
+                        "子フローの実行（住所回復処理）": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "65f74109-84fa-f011-8406-002248f17ef0"
+                            },
+                            "body": {
+                              "text": "@string(body('JSON_の解析(親フローからの情報を解析)'))",
+                              "text_1": "@variables('プロンプト名')",
+                              "text_2": "@variables('ナレッジ機能')",
+                              "text_3": "@variables('点検結果テーブル')",
+                              "text_4": "@variables('詳細データ管理テーブル')",
+                              "text_5": "@string(outputs('AIプロンプト連携用'))"
+                            }
+                          }
+                        },
+                        "子フローの実行ステータスの設定_1": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "子フローの実行ステータス",
+                            "value": "@body('子フローの実行（住所回復処理）')?['status']"
+                          },
+                          "runAfter": {
+                            "子フローの実行（住所回復処理）": [
+                              "Succeeded"
+                            ]
+                          }
+                        },
+                        "エラー情報の設定_1": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "エラー情報",
+                            "value": "@body('子フローの実行（住所回復処理）')?['errorinfo']"
+                          },
+                          "runAfter": {
+                            "子フローの実行ステータスの設定_1": [
+                              "Succeeded"
+                            ]
+                          }
+                        }
+                      },
+                      "case": "住所"
+                    }
+                  },
+                  "runAfter": {
+                    "AIプロンプト連携用": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "AIプロンプト連携用": {
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_id": "@{items('AIプロンプト毎に処理を実施する')?['ca_id']}",
+                    "ca_ai_promptid": "@{items('AIプロンプト毎に処理を実施する')?['ca_ai_promptid']}",
+                    "ca_prompt": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt']}",
+                    "ca_prompt2": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt2']}",
+                    "ca_prompt3": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt3']}",
+                    "ca_prompt4": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt4']}",
+                    "ca_prompt5": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt5']}",
+                    "ca_prompt6": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt6']}",
+                    "ca_prompt7": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt7']}",
+                    "ca_prompt8": "@{items('AIプロンプト毎に処理を実施する')?['ca_prompt8']}"
+                  },
+                  "runAfter": {
+                    "ナレッジ機能の有効化": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "行を一覧にする(AIプロンプト)": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 20
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "9f61966e-13e3-4e3c-855f-fcc89c6eb925"
+              }
+            },
+            "AIプロンプトあり？": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('行を一覧にする(AIプロンプト)')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {},
+              "else": {
+                "actions": {
+                  "行の更新(詳細データ管理)-Completed": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "@variables('詳細データ管理テーブル')",
+                        "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                        "item": "@outputs('詳細データ管理テーブル登録用(Completed)')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "fea14cd4-fe3e-4947-9d19-96072664b2b4"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "詳細データ管理テーブル登録用(Completed)": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5d8adb79-1742-4018-bf48-99b5e113b358"
+              }
+            },
+            "詳細データ管理テーブル登録用(InProgress)": {
+              "type": "Compose",
+              "inputs": {
+                "ca_status_updated_datetime": "@utcNow()",
+                "ca_ai_inspection_status": 1
+              },
+              "runAfter": {
+                "JSON_の解析(親フローからの情報を解析)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c6902bcf-1104-4191-aea7-93f63c6d63b8"
+              }
+            },
+            "行の更新(詳細データ管理)-InProgress": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "@variables('詳細データ管理テーブル')",
+                  "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                  "item": "@outputs('詳細データ管理テーブル登録用(InProgress)')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "詳細データ管理テーブル登録用(InProgress)": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "da1b7235-da06-48ae-8dc2-3b726ec42bb3"
+              }
+            },
+            "子フローは異常終了したか？": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('子フローの実行ステータス')",
+                      "Failed"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "異常終了を継承": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "title": "status",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "promptname": {
+                          "title": "promptName",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "errorinfo": {
+                          "title": "errorInfo",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "status": "@{variables('子フローの実行ステータス')}",
+                      "promptname": "@{variables('プロンプト名')}",
+                      "errorinfo": "@{variables('エラー情報')}"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ef76aeb1-56cb-4910-b133-e73fc9f92469"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "正常終了を応答": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "title": "status",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "promptname": {
+                            "title": "promptName",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "errorinfo": {
+                            "title": "errorInfo",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "status": "Success",
+                        "promptname": "@{variables('プロンプト名')}",
+                        "errorinfo": "N/A"
+                      }
+                    },
+                    "runAfter": {
+                      "行の更新(詳細データ管理)-Completed_1": [
+                        "SUCCEEDED"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "ef76aeb1-56cb-4910-b133-e73fc9f92469"
+                    }
+                  },
+                  "行の更新(詳細データ管理)-Completed_1": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "@variables('詳細データ管理テーブル')",
+                        "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                        "item": "@outputs('詳細データ管理テーブル登録用(Completed)')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "fea14cd4-fe3e-4947-9d19-96072664b2b4"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "AIプロンプトあり？": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "詳細データ管理テーブル登録用(Completed)": {
+              "type": "Compose",
+              "inputs": {
+                "ca_ai_inspection_status": 2
+              },
+              "runAfter": {
+                "AIプロンプト毎に処理を実施する": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "aa68350a-b8ab-4b51-9e86-303e6a4a8140"
+              }
+            }
+          },
+          "runAfter": {
+            "failedErrorMessageを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "61cfa150-4e11-4681-8759-00374113d38e"
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "actions": {
+            "異常終了を応答": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "promptname": {
+                      "title": "promptName",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    },
+                    "errorinfo": {
+                      "title": "errorInfo",
+                      "type": "string",
+                      "x-ms-content-hint": "TEXT",
+                      "x-ms-dynamically-added": true
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "status": "Failed",
+                  "promptname": "@{variables('プロンプト名')}",
+                  "errorinfo": "@{outputs('エラー情報連携用')}"
+                }
+              },
+              "runAfter": {
+                "エラー情報連携用": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d4fd4b65-88e8-43ad-a717-65519f969eb5"
+              }
+            },
+            "ロールバック処理": {
+              "type": "Scope",
+              "actions": {
+                "AI点検結果を削除": {
+                  "type": "Foreach",
+                  "foreach": "@variables('登録ID')",
+                  "actions": {
+                    "行を削除する(AI点検で登録行を削除)": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@variables('点検結果テーブル')",
+                          "recordId": "@items('AI点検結果を削除')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d5c393f6-3c13-4471-a91f-24c11998374a"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d49a22c9-9453-4bc8-91c3-b17b663a0720"
+                  }
+                },
+                "行の更新(詳細データ管理)-Failed": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "@variables('詳細データ管理テーブル')",
+                      "recordId": "@body('JSON_の解析(親フローからの情報を解析)')?['document_item_id']",
+                      "item": "@outputs('詳細データ管理テーブル登録用(Failed)')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "詳細データ管理テーブル登録用(Failed)": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Skipped",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "13908030-0be8-4935-a9b9-b03f8bf67a00"
+                  }
+                },
+                "詳細データ管理テーブル登録用(Failed)": {
+                  "type": "Compose",
+                  "inputs": {
+                    "ca_ai_inspection_status": 3
+                  },
+                  "runAfter": {
+                    "AI点検結果を削除": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Skipped",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "984d7f81-5091-4fce-8cc6-48c0b274abac"
+                  }
+                }
+              },
+              "runAfter": {
+                "エラー箇所の解析": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9fe62fa1-b234-4e87-97f5-09b50a85f34d"
+              }
+            },
+            "終了": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              },
+              "runAfter": {
+                "異常終了を応答": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d1215ca6-2a1d-4982-8c97-c9c8b0efbbcd"
+              }
+            },
+            "エラー情報連携用": {
+              "type": "Compose",
+              "inputs": {
+                "flowId": "@{workflow().name}",
+                "flowName": "@{variables('フローの名前')}",
+                "errorTimestamp": "@{convertTimeZone(utcNow(), 'UTC', 'Tokyo Standard Time', 'yyyy-MM-dd HH:mm:ss')}",
+                "promptName": "",
+                "errorDetail": "@{string(result('Try'))}",
+                "failedAction": "@{variables('failedActionName')}",
+                "errorCode": "@{variables('failedErrorCode')}",
+                "errorMessage": "@{variables('failedErrorMessage')}"
+              },
+              "runAfter": {
+                "ロールバック処理": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              }
+            },
+            "エラー箇所の解析": {
+              "type": "Foreach",
+              "foreach": "@result('Try')",
+              "actions": {
+                "条件": {
+                  "type": "If",
+                  "expression": {
+                    "or": [
+                      {
+                        "equals": [
+                          "@items('エラー箇所の解析')?['status']",
+                          "Failed"
+                        ]
+                      },
+                      {
+                        "equals": [
+                          "@items('エラー箇所の解析')?['status']",
+                          "Skipped"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "failedActionNameの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedActionName",
+                        "value": "@item()?['name']"
+                      }
+                    },
+                    "failedErrorCodeの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedErrorCode",
+                        "value": "@item()?['error']?['code']"
+                      },
+                      "runAfter": {
+                        "failedActionNameの設定": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "failedErrorMessageの設定": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "failedErrorMessage",
+                        "value": "@item()?['error']?['message']"
+                      },
+                      "runAfter": {
+                        "failedErrorCodeの設定": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Try": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d8b86eee-6459-4b01-ba4a-1c74dea764a7"
+          }
+        },
+        "詳細データ管理テーブルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "詳細データ管理テーブル",
+                "type": "string",
+                "value": "ca_document_items"
+              }
+            ]
+          },
+          "runAfter": {
+            "点検結果テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ba0b2e57-529f-4b19-abe8-3eb383e480ef"
+          }
+        },
+        "ナレッジ機能を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ナレッジ機能",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "AIプロンプトテーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b9b4b675-91a5-4794-8d05-726f243ab26d"
+          }
+        },
+        "登録IDを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "登録ID",
+                "type": "array",
+                "value": []
+              }
+            ]
+          },
+          "runAfter": {
+            "ナレッジ機能を初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3b831006-0c18-4e8b-a2bf-eb411594d31a"
+          }
+        },
+        "点検結果テーブルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "点検結果テーブル",
+                "type": "string",
+                "value": "ca_ais"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "d5259e2f-029c-49cd-8d4b-6a51747f7638"
+          }
+        },
+        "AIプロンプトテーブルを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AIプロンプトテーブル",
+                "type": "string",
+                "value": "ca_ai_prompts"
+              }
+            ]
+          },
+          "runAfter": {
+            "詳細データ管理テーブルを初期化する": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a2b5ed02-37d8-4c09-abec-4045b4b4fb3b"
+          }
+        },
+        "サブ書類連番を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "index",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "登録IDを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "サブ書類確認チェック結果を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "サブ書類確認チェック結果",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "サブ書類連番を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "プロンプト名を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "プロンプト名",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "サブ書類確認チェック結果を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "子フローの実行ステータスを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "子フローの実行ステータス",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "プロンプト名を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "エラー情報を初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "エラー情報",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "子フローの実行ステータスを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "フロー名の設定": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "フローの名前",
+                "type": "string",
+                "value": "【エラー回復】F-05-002_項目補正-AIプロンプト実行"
+              }
+            ]
+          },
+          "runAfter": {
+            "エラー情報を初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedActionNameを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedActionName",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "フロー名の設定": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedErrorCodeを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedErrorCode",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "failedActionNameを初期化する": [
+              "Succeeded"
+            ]
+          }
+        },
+        "failedErrorMessageを初期化する": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "failedErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "failedErrorCodeを初期化する": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
