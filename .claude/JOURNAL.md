@@ -76,6 +76,30 @@
 - ローカルで commit & push → Cloud Shell で `git pull` → `make gcb-deploy && make run-deploy`
 - 再デプロイ後は `${SERVICE_URL}/health` で動作確認
 
+## 2026-04-27 (T-001 Cloud Run 動作確認 完了)
+
+### 結果
+全 5 ケースが期待通りに動作:
+
+| ケース | エンドポイント | 入力 | 結果 |
+|---|---|---|---|
+| 0 | GET /health | — | `{"status":"ok","env":"dev"}` ✅ |
+| 1 | POST address-master-match | ジングウマエ | OK / 150-0001 ✅ |
+| 2 | POST address-master-match | ミナミアオヤマ | OK / 107-0062 (字丁複数→重複削除→1件) ✅ |
+| 3 | POST address-master-match | マルノウチ | NG (候補件数=2 で自動回復不可) ✅ |
+| 4 | POST address-master-match | 未知の住所 | NG (住所カナ分割で特定できず) ✅ |
+
+`recovery_reason` の文言は Power Automate 元フロー (`[新住所(〒)]　AFLAC住所マスタより回復` 等) と整合。
+`details` に AI プロンプト名・バージョン・生レスポンス・ヒットしたカナを記録、CLAUDE.md §7 (AI 説明可能性) の要件を満たす。
+
+### 副次的な学び
+- Cloud Shell の curl コマンドで JSON ボディを `-d` 渡しすると、ターミナル幅で行折り返しされたコマンドをコピペした際に**改行が JSON 文字列内に混入**して `json_invalid` エラーになる。
+- 対処: 短い変数定義 + 配列ループで構成すると折り返し耐性がある。あるいはヒアドキュメント or ファイル経由 (`--data @file.json`)。
+
+### T-001 ステータス
+**完全完了**。Cloud Run でのスタック起動 → API 動作 → 業務ロジック (突合 OK/NG) すべて期待通り。
+次タスク (T-002 以降) は STATUS.md 参照。
+
 ### 設計上の判断ログ
 - **`AIClient` 抽象**: プロンプト名 + 入力 dict → 構造化 dict の汎用 API として定義 (元 PA の AI Builder Custom Prompt と同じ抽象度)。Bedrock プロキシ・Vertex AI の両方に差し込めるよう汎用化
 - **`AddressMasterRepository` 抽象**: 検索メソッドはユースケース駆動で命名 (`find_aflac_by_municipality_and_oaza_kana`)。汎用 CRUD ではなく業務クエリ単位で抽象化することで、SqlAlchemy 実装時に最適化しやすくする
