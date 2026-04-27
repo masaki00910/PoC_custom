@@ -1,0 +1,32 @@
+# Cloud Build 定義。
+# `gcloud builds submit --tag` は Dockerfile 固定の制約があるため、
+# CLAUDE.md §10 の Containerfile 命名規約に従いつつ Cloud Build でビルドできるよう
+# 本ファイルから明示的に -f Containerfile を指定する。
+#
+# 使い方:
+#   gcloud builds submit \
+#     --config=cloudbuild.yaml \
+#     --substitutions=_REGION=asia-northeast1,_REPO=error-recovery-backend,_IMAGE=error-recovery-backend,_TAG=latest \
+#     --project=poc-custom
+
+substitutions:
+  _REGION: asia-northeast1
+  _REPO: error-recovery-backend
+  _IMAGE: error-recovery-backend
+  _TAG: latest
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Containerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${_TAG}
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${_TAG}
+
+options:
+  logging: CLOUD_LOGGING_ONLY
