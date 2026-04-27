@@ -38,14 +38,14 @@ CREATE TABLE error_list_items (
     status_updated_at               TIMESTAMPTZ NOT NULL,                   -- ca_status_updated_datetime
     processing_status               VARCHAR(100),                           -- ca_processing_status
 
-    -- 1st check
+    -- 1st check (実データに長文が混じるため TEXT)
     first_check_ng                  BOOLEAN,                                -- ca_1st_check_result
-    first_check_recovery_value      VARCHAR(1000),                          -- ca_1st_check_recovery_value
-    first_check_recovery_reason     VARCHAR(1000),                          -- ca_1st_check_recovery_reason
+    first_check_recovery_value      TEXT,                                   -- ca_1st_check_recovery_value
+    first_check_recovery_reason     TEXT,                                   -- ca_1st_check_recovery_reason
 
     -- 2nd check recovery
-    second_check_recovery_value     VARCHAR(1000),                          -- ca_2nd_check_recovery_value
-    second_check_recovery_reason    VARCHAR(100),                           -- ca_2nd_check_recovery_reason
+    second_check_recovery_value     TEXT,                                   -- ca_2nd_check_recovery_value
+    second_check_recovery_reason    TEXT,                                   -- ca_2nd_check_recovery_reason
 
     -- OCR bounding box (原文は nvarchar。数値でなく座標文字列のまま踏襲)
     ocr_bbox_left                   VARCHAR(100),                           -- ca_left

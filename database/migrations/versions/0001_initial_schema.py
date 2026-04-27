@@ -37,6 +37,7 @@ _CREATE_ORDER: tuple[str, ...] = (
     "error_list_item_master",
     "japan_post_address_master",
     "aflac_address_master",
+    "corporate_type_master",
     # settings (FK -> masters)
     "document_types",
     "ai_prompts",
@@ -125,33 +126,67 @@ def upgrade() -> None:
     op.create_index("ix_error_list_item_master_error_type", "error_list_item_master", ["error_type"])
     op.create_index("ix_error_list_item_master_group", "error_list_item_master", ["field_group"])
 
+    # KEN_ALL.CSV (utf_ken_all) の公式 15 カラム構成に準拠。
+    # https://www.post.japanpost.jp/zipcode/dl/utf-zip.html
     op.create_table(
         "japan_post_address_master",
         sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True,
                   server_default=sa.text("gen_random_uuid()")),
-        sa.Column("postal_code", sa.String(850), nullable=False),
-        sa.Column("postal_code_first3", sa.String(100)),
-        sa.Column("area_code", sa.String(100)),
-        sa.Column("prefecture_name", sa.String(100)),
-        sa.Column("prefecture_name_kana", sa.String(100)),
-        sa.Column("municipality_name", sa.String(100)),
-        sa.Column("municipality_name_kana", sa.String(100)),
-        sa.Column("town_name", sa.String(100)),
-        sa.Column("town_name_kana", sa.String(100)),
+        # KEN_ALL #1〜#9: 識別コードと住所名称
+        sa.Column("local_government_code", sa.String(5)),       # #1 全国地方公共団体コード
+        sa.Column("old_postal_code", sa.String(5)),             # #2 (旧)郵便番号 5桁
+        sa.Column("postal_code", sa.String(7), nullable=False), # #3 郵便番号 7桁
+        sa.Column("prefecture_name_kana", sa.String(200)),      # #4 都道府県名カナ (半角)
+        sa.Column("municipality_name_kana", sa.String(200)),    # #5 市区町村名カナ
+        sa.Column("town_name_kana", sa.Text()),                 # #6 町域名カナ (KEN_ALL は括弧内サブ町域列挙で 400+ 文字になる行あり)
+        sa.Column("prefecture_name", sa.String(20)),            # #7 都道府県名 (漢字)
+        sa.Column("municipality_name", sa.String(100)),         # #8 市区町村名
+        sa.Column("town_name", sa.Text()),                      # #9 町域名 (#6 と同じ理由で TEXT)
+        # KEN_ALL #10〜#13: フラグ
+        sa.Column("multiple_postal_codes_flag", sa.SmallInteger()),  # #10
+        sa.Column("koaza_banchi_flag", sa.SmallInteger()),           # #11
+        sa.Column("chome_flag", sa.SmallInteger()),                  # #12
+        sa.Column("multiple_towns_flag", sa.SmallInteger()),         # #13
+        # KEN_ALL #14〜#15: 更新メタ
+        sa.Column("update_status", sa.SmallInteger()),               # #14 0/1/2
+        sa.Column("change_reason", sa.SmallInteger()),               # #15 0-6
+        # 派生カラム (KEN_ALL外、範囲検索用)
+        sa.Column("postal_code_first3", sa.String(3),
+                  sa.Computed("LEFT(postal_code, 3)", persisted=True)),
         sa.Column("created_at", sa.dialects.postgresql.TIMESTAMP(timezone=True),
                   nullable=False, server_default=sa.text("NOW()")),
         sa.Column("updated_at", sa.dialects.postgresql.TIMESTAMP(timezone=True),
                   nullable=False, server_default=sa.text("NOW()")),
+        sa.CheckConstraint(
+            "multiple_postal_codes_flag IS NULL OR multiple_postal_codes_flag IN (0, 1)",
+            name="chk_jpaddr_multi_postal_codes"),
+        sa.CheckConstraint(
+            "koaza_banchi_flag IS NULL OR koaza_banchi_flag IN (0, 1)",
+            name="chk_jpaddr_koaza_banchi"),
+        sa.CheckConstraint(
+            "chome_flag IS NULL OR chome_flag IN (0, 1)",
+            name="chk_jpaddr_chome"),
+        sa.CheckConstraint(
+            "multiple_towns_flag IS NULL OR multiple_towns_flag IN (0, 1)",
+            name="chk_jpaddr_multi_towns"),
+        sa.CheckConstraint(
+            "update_status IS NULL OR update_status IN (0, 1, 2)",
+            name="chk_jpaddr_update_status"),
+        sa.CheckConstraint(
+            "change_reason IS NULL OR change_reason BETWEEN 0 AND 6",
+            name="chk_jpaddr_change_reason"),
     )
     op.create_index("ix_jpaddr_postal_code", "japan_post_address_master", ["postal_code"])
     op.create_index("ix_jpaddr_postal_code_first3", "japan_post_address_master", ["postal_code_first3"])
     op.create_index("ix_jpaddr_prefecture", "japan_post_address_master", ["prefecture_name"])
+    op.create_index("ix_jpaddr_local_govt_code", "japan_post_address_master", ["local_government_code"])
 
     op.create_table(
         "aflac_address_master",
         sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True,
                   server_default=sa.text("gen_random_uuid()")),
-        sa.Column("legacy_id", sa.String(850), nullable=False, unique=True),
+        # legacy_id (旧 ca_id): Dataverse PrimaryName だが実データに重複・空欄混在のため NOT NULL/UNIQUE は付けない
+        sa.Column("legacy_id", sa.String(850)),
         sa.Column("address_code", sa.String(100)),
         sa.Column("new_address_code", sa.String(100)),
         sa.Column("postal_code", sa.String(100)),
@@ -178,6 +213,20 @@ def upgrade() -> None:
     op.create_index("ix_aflacaddr_address_code", "aflac_address_master", ["address_code"])
     op.create_index("ix_aflacaddr_new_address_code", "aflac_address_master", ["new_address_code"])
     op.create_index("ix_aflacaddr_prefecture", "aflac_address_master", ["prefecture_name"])
+
+    # corporate_type_master: sample_table の設計書に無いが Dataverse 実データから新規追加
+    op.create_table(
+        "corporate_type_master",
+        sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True,
+                  server_default=sa.text("gen_random_uuid()")),
+        sa.Column("corporate_type", sa.String(200), nullable=False),
+        sa.Column("short_name", sa.String(100)),
+        sa.Column("created_at", sa.dialects.postgresql.TIMESTAMP(timezone=True),
+                  nullable=False, server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.dialects.postgresql.TIMESTAMP(timezone=True),
+                  nullable=False, server_default=sa.text("NOW()")),
+    )
+    op.create_index("ix_corporate_type_master_short_name", "corporate_type_master", ["short_name"])
 
     # -------- settings --------
     op.create_table(
@@ -206,7 +255,8 @@ def upgrade() -> None:
         "ai_prompts",
         sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True,
                   server_default=sa.text("gen_random_uuid()")),
-        sa.Column("prompt_code", sa.String(850), nullable=False, unique=True),
+        # prompt_code: 実データに重複あり (例「被保険者住所既契約突合チェック」) のため UNIQUE は付けない
+        sa.Column("prompt_code", sa.String(850), nullable=False),
         sa.Column("prompt_name", sa.String(100), nullable=False),
         sa.Column("processing_order", sa.Integer, nullable=False),
         sa.Column("use_knowledge", sa.Boolean, nullable=False, server_default=sa.text("FALSE")),
@@ -313,10 +363,11 @@ def upgrade() -> None:
         sa.Column("status_updated_at", sa.dialects.postgresql.TIMESTAMP(timezone=True), nullable=False),
         sa.Column("processing_status", sa.String(100)),
         sa.Column("first_check_ng", sa.Boolean),
-        sa.Column("first_check_recovery_value", sa.String(1000)),
-        sa.Column("first_check_recovery_reason", sa.String(1000)),
-        sa.Column("second_check_recovery_value", sa.String(1000)),
-        sa.Column("second_check_recovery_reason", sa.String(100)),
+        # recovery 系: 実データに長文混入 (1000 文字超過行あり) のため TEXT
+        sa.Column("first_check_recovery_value", sa.Text),
+        sa.Column("first_check_recovery_reason", sa.Text),
+        sa.Column("second_check_recovery_value", sa.Text),
+        sa.Column("second_check_recovery_reason", sa.Text),
         sa.Column("ocr_bbox_left", sa.String(100)),
         sa.Column("ocr_bbox_top", sa.String(100)),
         sa.Column("ocr_bbox_width", sa.String(100)),
@@ -626,6 +677,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # IF EXISTS をつけて、テーブル追加の途中状態でも downgrade できるようにする
     for table in reversed(_CREATE_ORDER):
-        op.drop_table(table)
+        op.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
     # pgcrypto は他用途で使用している可能性があるため DROP EXTENSION は行わない

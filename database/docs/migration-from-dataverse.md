@@ -178,14 +178,37 @@
 ## 7. ca_japan_post_address_master → `japan_post_address_master`
 
 **テーブル分類**: masters
+**Source of Truth**: 日本郵便 KEN_ALL.CSV (`utf_ken_all.csv` / UTF-8 版) — https://www.post.japanpost.jp/zipcode/dl/utf-zip.html
+本テーブルは KEN_ALL の **公式 15 カラム** に準拠する。Dataverse 側に存在しなかった #2/#10〜#15 は新規追加、命名は KEN_ALL を正とする。
+
+### Dataverse → 新カラム 対応
 
 | # | Dataverse 論理名 | → | 新カラム | 型 | 変更 | 備考 |
 |---|---|---|---|---|---|---|
 | 1 | ca_japan_post_address_masterid | ➡ | id | UUID | — | |
-| 2 | ca_postal_code | ➡ | postal_code | VARCHAR(850) NOT NULL | — | PrimaryName, 非 UNIQUE (複数町域) |
-| 3 | ca_postal_code_first3 | ➡ | postal_code_first3 | VARCHAR(100) | — | |
-| 4 | ca_area_code | ➡ | area_code | VARCHAR(100) | — | |
-| 5〜10 | 都道府県/市区町村/町域 (漢字+カナ) | ➡ | prefecture_name, prefecture_name_kana, municipality_name, municipality_name_kana, town_name, town_name_kana | VARCHAR(100) | — | |
+| 2 | ca_postal_code | ➡ | postal_code | VARCHAR(7) NOT NULL | 🔄 型縮小 | KEN_ALL #3 (7桁)。850→7。非 UNIQUE (複数町域) |
+| 3 | ca_postal_code_first3 | 🔄 | postal_code_first3 | VARCHAR(3) GENERATED | 自動計算化 | `LEFT(postal_code,3)` の STORED 派生列 |
+| 4 | ca_area_code | 🔄 | local_government_code | VARCHAR(5) | リネーム+型変更 | KEN_ALL #1: JIS X0401+X0402 全国地方公共団体コード |
+| 5 | ca_prefecture_name | ➡ | prefecture_name | VARCHAR(20) | — | KEN_ALL #7 (漢字) |
+| 6 | ca_prefecture_name_kana | ➡ | prefecture_name_kana | VARCHAR(200) | — | KEN_ALL #4 (半角カナ) |
+| 7 | ca_municipality_name | ➡ | municipality_name | VARCHAR(100) | — | KEN_ALL #8 |
+| 8 | ca_municipality_name_kana | ➡ | municipality_name_kana | VARCHAR(200) | — | KEN_ALL #5 |
+| 9 | ca_town_name | 🔄 | town_name | TEXT | 型変更 | KEN_ALL #9 — 括弧内サブ町域列挙で 400+ 文字になる行があるため TEXT |
+| 10 | ca_town_name_kana | 🔄 | town_name_kana | TEXT | 型変更 | KEN_ALL #6 — 同上 |
+
+### KEN_ALL 由来で新規追加されたカラム
+
+| KEN_ALL # | 新カラム | 型 | 内容 |
+|---|---|---|---|
+| #2 | old_postal_code | VARCHAR(5) | (旧)郵便番号 5 桁 |
+| #10 | multiple_postal_codes_flag | SMALLINT (0/1) | 一町域が二以上の郵便番号で表される場合 |
+| #11 | koaza_banchi_flag | SMALLINT (0/1) | 小字毎に番地が起番されている町域 |
+| #12 | chome_flag | SMALLINT (0/1) | 丁目を有する町域 |
+| #13 | multiple_towns_flag | SMALLINT (0/1) | 一つの郵便番号で二以上の町域 |
+| #14 | update_status | SMALLINT (0/1/2) | 更新の表示 (0=変更なし, 1=変更あり, 2=廃止) |
+| #15 | change_reason | SMALLINT (0-6) | 変更理由 (0=変更なし, 1=市政等, 2=住居表示, 3=区画整理, 4=郵便区調整, 5=訂正, 6=廃止) |
+
+これにより `utf_ken_all.csv` を `\COPY` で 15 カラムそのまま投入できる。`postal_code_first3` は派生列のため CSV からは投入しない。
 
 ---
 
@@ -196,7 +219,7 @@
 | # | Dataverse 論理名 | → | 新カラム | 型 | 変更 | 備考 |
 |---|---|---|---|---|---|---|
 | 1 | ca_aflac_address_masterid | ➡ | id | UUID | — | |
-| 2 | ca_id | ➡ | legacy_id | VARCHAR(850) NOT NULL UNIQUE | — | Dataverse サロゲート ID。業務で使う場合に備えて保持 |
+| 2 | ca_id | 🔄 | legacy_id | VARCHAR(850) | NULL/重複許容 | Dataverse PrimaryName。実データに重複(例:`14`)と空欄が混在するため NOT NULL/UNIQUE 制約は外した |
 | 3 | ca_address_code | ➡ | address_code | VARCHAR(100) | — | |
 | 4 | ca_new_address_code | ➡ | new_address_code | VARCHAR(100) | — | |
 | 5 | ca_postal_code | ➡ | postal_code | VARCHAR(100) | — | |

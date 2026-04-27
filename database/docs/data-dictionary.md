@@ -103,7 +103,12 @@
 `error_type` + `field_group` + `attribute` で項目を分類。
 
 ### `japan_post_address_master` — 日本郵便住所
-`postal_code` (UNIQUE でない) で照合。
+日本郵便 KEN_ALL.CSV (`utf_ken_all.csv`) を Source of Truth とし、公式 15 カラムをそのまま保持する。
+- `postal_code` は 7 桁、UNIQUE ではない (1 郵便番号で複数町域あり)。
+- `local_government_code` は JIS X0401 (都道府県 2 桁) + JIS X0402 (市区町村 3 桁) の 5 桁コード。
+- `multiple_postal_codes_flag` / `koaza_banchi_flag` / `chome_flag` / `multiple_towns_flag` は KEN_ALL #10〜#13 のフラグ (0/1)。
+- `update_status` (0=変更なし / 1=変更あり / 2=廃止)、`change_reason` (0-6) で KEN_ALL の更新履歴を保持。
+- `postal_code_first3` は `LEFT(postal_code, 3)` の `GENERATED ALWAYS AS ... STORED` 派生列 (KEN_ALL外、範囲検索高速化用)。
 
 ### `aflac_address_master` — Aflac 住所
 `postal_code` または `address_code` / `new_address_code` で照合。大字・字階層を持つ。

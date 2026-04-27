@@ -9,8 +9,8 @@
 CREATE TABLE ai_prompts (
     id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    -- Business identifiers
-    prompt_code         VARCHAR(850) NOT NULL UNIQUE,       -- ca_name (PrimaryName, 論理名はプロンプトID)
+    -- Business identifiers (実データに重複・空欄混在のため UNIQUE 制約は外す)
+    prompt_code         VARCHAR(850) NOT NULL,              -- ca_name (PrimaryName, 論理名はプロンプトID)
     prompt_name         VARCHAR(100) NOT NULL,              -- ca_id (論理名はプロンプト名前)
     processing_order    INTEGER      NOT NULL,              -- ca_processing_order
     use_knowledge       BOOLEAN      NOT NULL DEFAULT FALSE,-- ca_knowledge

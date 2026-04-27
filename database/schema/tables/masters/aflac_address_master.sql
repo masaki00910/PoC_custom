@@ -5,8 +5,8 @@
 CREATE TABLE aflac_address_master (
     id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    -- Business identifier (surrogate, Dataverse PrimaryName)
-    legacy_id                   VARCHAR(850) NOT NULL UNIQUE, -- ca_id
+    -- Business identifier (Dataverse PrimaryName: 実データでは重複・空が混在するため NOT NULL/UNIQUE は付けない)
+    legacy_id                   VARCHAR(850),                -- ca_id
 
     address_code                VARCHAR(100),               -- ca_address_code
     new_address_code            VARCHAR(100),               -- ca_new_address_code
