@@ -6,7 +6,7 @@
 
 ## 現状の実装範囲 (T-001 完了時点)
 
-- `/healthz`
+- `GET /health` — ヘルスチェック (`/healthz` は Knative queue-proxy が予約のため使えない)
 - `POST /v1/checks/address-master-match` — F-05-008 住所マスタ突合の最小実装
   - AI: `FakeAIClient` (固定応答)
   - DB: `InMemoryAddressMasterRepository` (CSV 数件をハードコード)
@@ -50,7 +50,7 @@ uv を使う場合は `make setup` でも可。
 別ターミナルで動作確認:
 
 ```bash
-curl http://127.0.0.1:8080/healthz
+curl http://127.0.0.1:8080/health
 
 curl -X POST http://127.0.0.1:8080/v1/checks/address-master-match \
   -H 'Content-Type: application/json' \
@@ -157,7 +157,7 @@ gcloud run deploy error-recovery-backend \
 ```bash
 SERVICE_URL=https://error-recovery-backend-xxxxx-an.a.run.app
 
-curl ${SERVICE_URL}/healthz
+curl ${SERVICE_URL}/health
 
 curl -X POST ${SERVICE_URL}/v1/checks/address-master-match \
   -H 'Content-Type: application/json' \

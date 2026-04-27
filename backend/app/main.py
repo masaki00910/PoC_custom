@@ -18,8 +18,10 @@ def create_app() -> FastAPI:
         description="保険申込書一次チェック バックエンド (PoC)",
     )
 
-    @app.get("/healthz", tags=["meta"])
-    async def healthz() -> dict[str, str]:
+    # 注: `/healthz` は Cloud Run / Knative の queue-proxy が予約しているため使用禁止
+    # (リクエストが queue-proxy に握られてユーザコンテナに届かない)
+    @app.get("/health", tags=["meta"])
+    async def health() -> dict[str, str]:
         return {"status": "ok", "env": settings.app_env.value}
 
     app.include_router(v1_router, prefix="/v1")

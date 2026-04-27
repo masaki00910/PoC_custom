@@ -49,6 +49,33 @@
 - 失敗時のログ確認は: Cloud Run コンソール → Logs、または `gcloud run services logs read error-recovery-backend --region=asia-northeast1`
 - 次タスク候補は STATUS.md の「次にやること B」を参照（推奨は T-002 = Bedrock プロキシ実クライアント実装）
 
+## 2026-04-27 (デプロイ後の `/healthz` 404 問題対応)
+
+### 事象
+- Cloud Shell から `make ar-create` → `make gcb-deploy` → `make run-deploy` を実行、Service URL 払い出し成功
+- 公開 URL (`https://error-recovery-backend-691038404010.asia-northeast1.run.app` / `https://error-recovery-backend-awvvdiqaua-an.a.run.app`) どちらでも `GET /healthz` が Google エッジの **404 HTML** を返す
+- コンテナ自身は健全（uvicorn 起動、ログにスタートアップ完了表示）
+- ingress=all、IAM に `allUsers: roles/run.invoker` 設定済（公開アクセス可）
+
+### 切り分け
+1. `gcloud run services proxy` で複数パスをテスト:
+   - `GET /healthz` → 404 HTML、`Server` ヘッダ無し ❌（コンテナに届いていない）
+   - `GET /openapi.json` → 200 JSON、`Server: Google Frontend` ✅
+   - `GET /docs` → 200 HTML、`Server: Google Frontend` ✅
+   - `GET /` → 404 JSON (FastAPI の)、`Server: Google Frontend` ✅
+   - `POST /v1/checks/address-master-match` → FastAPI のバリデーションエラー ✅
+2. `/healthz` だけがエッジで横取り → **Cloud Run / Knative の queue-proxy が `/healthz` を予約**しているため
+
+### 対応
+- `app/main.py` のヘルスチェックパスを `/healthz` → `/health` にリネーム
+- 関連修正: `tests/integration/test_api_address_master_match.py` のテスト、README の curl サンプル
+- `pytest` 全 8 件 pass で再確認
+- メモリに `project_cloud_run_reserved_paths.md` を追加（次回以降の Cloud Run 案件で同事象を即特定するため）
+
+### ユーザ次アクション
+- ローカルで commit & push → Cloud Shell で `git pull` → `make gcb-deploy && make run-deploy`
+- 再デプロイ後は `${SERVICE_URL}/health` で動作確認
+
 ### 設計上の判断ログ
 - **`AIClient` 抽象**: プロンプト名 + 入力 dict → 構造化 dict の汎用 API として定義 (元 PA の AI Builder Custom Prompt と同じ抽象度)。Bedrock プロキシ・Vertex AI の両方に差し込めるよう汎用化
 - **`AddressMasterRepository` 抽象**: 検索メソッドはユースケース駆動で命名 (`find_aflac_by_municipality_and_oaza_kana`)。汎用 CRUD ではなく業務クエリ単位で抽象化することで、SqlAlchemy 実装時に最適化しやすくする
