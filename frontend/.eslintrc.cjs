@@ -22,6 +22,11 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     'react-refresh/only-export-components': 'warn',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
+    // 日本語の全角スペースを UI テキストで使うため、文字列・JSX テキスト内では許容
+    'no-irregular-whitespace': [
+      'error',
+      { skipStrings: true, skipTemplates: true, skipRegExps: true, skipJSXText: true },
+    ],
   },
   ignorePatterns: ['dist', 'node_modules', '*.generated.ts'],
 };

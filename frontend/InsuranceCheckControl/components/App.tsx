@@ -1,5 +1,5 @@
 import { useEffect, useState, type FC } from 'react';
-import type { ApplicationRow, ChatMessagesByTab, ChatTab, PageId } from '../types/domain';
+import type { ApplicationRow, ChatTab, PageId } from '../types/domain';
 import { useAuth } from '../hooks/useAuth';
 import { AdminDashboard } from './AdminDashboard/AdminDashboard';
 import { ApplicationDetail } from './ApplicationDetail/ApplicationDetail';
@@ -16,16 +16,13 @@ export const App: FC = () => {
   const [page, setPage] = useState<PageId>('list');
   const [tabs, setTabs] = useState<ChatTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessagesByTab>({});
   const [rowHeight, setRowHeight] = useState(44);
   const [fontSize, setFontSize] = useState(13);
-  const [chatSplitPct, setChatSplitPct] = useState(42);
 
   const handleLogout = (): void => {
     logout();
     setTabs([]);
     setActiveTabId(null);
-    setChatMessages({});
     setPage('list');
   };
 
@@ -49,18 +46,12 @@ export const App: FC = () => {
       }
       return next;
     });
-    setChatMessages((m) => {
-      const n = { ...m };
-      delete n[id];
-      return n;
-    });
   };
 
   useEffect(() => {
     const panel = document.getElementById('tweaks-panel');
     const rowEl = document.getElementById('tw-row-height') as HTMLInputElement | null;
     const fontEl = document.getElementById('tw-font-size') as HTMLInputElement | null;
-    const splitEl = document.getElementById('tw-chat-split') as HTMLSelectElement | null;
     if (!panel) return;
 
     const onRow = (e: Event): void => {
@@ -71,10 +62,6 @@ export const App: FC = () => {
       const target = e.target as HTMLInputElement;
       setFontSize(Number(target.value));
     };
-    const onSplit = (e: Event): void => {
-      const target = e.target as HTMLSelectElement;
-      setChatSplitPct(Number(target.value));
-    };
     const onMsg = (e: MessageEvent<TweakMessage>): void => {
       if (e.data?.type === '__activate_edit_mode') panel.classList.add('visible');
       if (e.data?.type === '__deactivate_edit_mode') panel.classList.remove('visible');
@@ -82,14 +69,12 @@ export const App: FC = () => {
 
     rowEl?.addEventListener('input', onRow);
     fontEl?.addEventListener('input', onFont);
-    splitEl?.addEventListener('change', onSplit);
     window.addEventListener('message', onMsg);
     window.parent.postMessage({ type: '__edit_mode_available' }, '*');
 
     return () => {
       rowEl?.removeEventListener('input', onRow);
       fontEl?.removeEventListener('input', onFont);
-      splitEl?.removeEventListener('change', onSplit);
       window.removeEventListener('message', onMsg);
     };
   }, []);
@@ -139,10 +124,7 @@ export const App: FC = () => {
             activeTabId={activeTabId}
             onTabChange={setActiveTabId}
             onTabClose={closeTab}
-            chatSplitPct={chatSplitPct}
             fontSize={fontSize}
-            messages={chatMessages}
-            setMessages={setChatMessages}
           />
         )}
         {page === 'admin' && isAdmin && <AdminDashboard fontSize={fontSize} />}

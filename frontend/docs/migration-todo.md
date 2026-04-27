@@ -41,9 +41,11 @@ PCF + React 構成（`CLAUDE.md` §2）に 1:1 移植した段階。見た目は
   PCF `container` にマウントするだけで済むよう、App.tsx は props を受け取らない設計を維持
 
 ### 5. テスト（CLAUDE.md §6）
-- 未作成: `*.test.tsx` 一切なし
-- 方針:
-  - `hooks/useAuth.ts` — Vitest で最優先
+- 作成済み:
+  - `tests/unit/services/mock-llm-client.test.ts` — MockLLMClient 主要シナリオ
+  - `tests/unit/services/secondary-check-mock.test.ts` — applyToolCall / fetchSecondaryCheckDetail
+- 未作成:
+  - `hooks/useAuth.ts` / `hooks/useSecondaryCheck.ts` の hook test（React Testing Library セットアップが必要）
   - `utils/formatters.ts` — pad / fmtDate の単体テスト
   - `components/ApplicationList` — React Testing Library で検索・ソート・ページング
   - API 呼び出しは `msw` でモック（API 連携実装後）
@@ -62,8 +64,8 @@ PCF + React 構成（`CLAUDE.md` §2）に 1:1 移植した段階。見た目は
 
 ## 移植で CLAUDE.md から逸脱している点（要追認）
 
-- **`components/AdminDashboard/` / `components/LoginPage/` を新設**
-  CLAUDE.md §2 のディレクトリ例には列挙されていないが、app.html の機能を保持するため追加。
+- **`components/AdminDashboard/` / `components/LoginPage/` / `components/SecondaryCheckPanel/` を新設**
+  CLAUDE.md §2 のディレクトリ例には列挙されていないが、機能を保持するため追加。
   必要と判断したが、「新しいディレクトリは先に提案して合意を取る」原則に抵触するので追認依頼。
 - **インライン style を暫定許容**
   CLAUDE.md §3 は「動的な値のみ例外」だが、現状は静的スタイルも大量にインライン。
@@ -71,3 +73,11 @@ PCF + React 構成（`CLAUDE.md` §2）に 1:1 移植した段階。見た目は
 - **`scripts/generate-api-types.sh` は未作成**
   `package.json` に同名スクリプトはプレースホルダ (`echo` のみ) で用意。
   backend の openapi.json が確定次第、実スクリプト化する。
+
+## 二次チェック画面（2026-04-24 実装）
+
+- `frontend/docs/migration-plan-secondary-check.md` の Phase 1 を実装済み
+- 変更: `ApplicationDetail` を 3 ペイン化（チャット / 判断履歴 / 画像ビューア）
+- 新規: `SecondaryCheckPanel/` / `useSecondaryCheck` / `MockLLMClient` / `ImageViewer` ラッパー
+- 暫定: Q4=B（一次承認も `update_recovery_value` で明示記録）。DB 設計見直し時に A（NULL 解釈）へ戻す可能性あり
+- 未対応: 実 LLM 接続 / backend API 実装 / 三次チェック / hook test
