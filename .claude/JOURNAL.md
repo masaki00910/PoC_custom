@@ -268,3 +268,24 @@
    - **重要**: 環境変数名が変わったので Cloud Run の env vars が `AI__PROVIDER` を読むように更新される (Makefile 経由なら自動)
 2. T-003 / T-004 の curl 動作確認 (STATUS.md の「次にやること」参照)
 3. T-005 (F-05-005 オーケストレータ) に進む
+
+## 2026-04-30 (Cloud Run 再デプロイ + スモークテスト全 5 ケース pass)
+
+### 結果
+T-003 / T-004 / T-010 を `git push origin main` (14ac65b..252b03c) → ユーザーが Cloud Shell で `git pull && make gcb-deploy && make run-deploy` → 5 ケース全部期待通り。
+
+| # | ケース | 結果 |
+|---|---|---|
+| 1 | health | status=ok, env=dev |
+| 2 | F-05-008 Aflac ヒット | rule_version 1.1.0 / OK / 150-0001 |
+| 3 | F-05-008 KEN_ALL フォールバック | OK / 225-0002 / details に半角カナ `ｶﾅｶﾞﾜｹﾝﾖｺﾊﾏｼｱｵﾊﾞｸｳﾂｸｼｶﾞｵｶ` |
+| 4 | F-05-006 整合 OK | OK / 150-0001 / consistency=OK |
+| 5 | F-05-006 整合 NG → 補完 OK | OK / 150-0001 / consistency=NG, complement=OK / recovery_reason に補完 reason prefix |
+
+### 副次的な学び
+- **「ローカル commit したつもりが push されていない」事故**: 1 回目のデプロイで T-003/T-004 が反映されなかった原因。git status の `Your branch is ahead of 'origin/main' by N commits` を見落とすと、ユーザーは新コードをデプロイしたつもりが古いコードのままで動作確認することになる。**コミット完了報告は push 済みかどうかも併せて伝える** ことが必要
+- **Cloud Shell でのヒアドキュメント貼り付け事故**: Markdown コードブロックのインデントが Cloud Shell ターミナルに貼り付けられる際に保持され、ヒアドキュメント終端 `EOF` の前にスペースが入って終端と認識されない事象が複数回発生。回避策はシングルクォート 1 行 curl 形式 (`curl ... -d '{"...":"..."}' | jq .`) または scripts/ にスクリプトを commit して `git pull` で取得する方式。memory に保存済み
+- **PA フローの `recovery_reason` 連結ロジックの再現**: Case 5 で `"[新住所カナ] 漢字 '神宮前' に対応するカナを補完　[新住所(〒)]　AFLAC住所マスタより回復"` と、補完 reason + F-05-008 reason の連結が PA フローの `Compose` 動作と整合することを確認。
+
+### ステータス
+T-003 / T-004 / T-010 すべて完全完了 (実装 + commit + push + デプロイ + 動作確認)。次タスクは T-005 (F-05-005 オーケストレータ)。

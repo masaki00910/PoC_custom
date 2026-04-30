@@ -1,15 +1,13 @@
 # プロジェクト現状サマリ
 
-最終更新: 2026-04-30 (T-004 commit 済 68205c0 / T-010 可搬性ガードレール完了)
+最終更新: 2026-04-30 (T-003/T-004/T-010 デプロイ + 動作確認完了)
 
 ## 概要
 保険申込書の一次チェックを AI で自動化するシステムの PoC。Power Automate で動いている既存のエラー回復フローを Python (FastAPI) に移行し、Cloud Run 上で動作させる。3 リポジトリ構成 (frontend / backend / database)。
 
 ## 現在のフェーズ
-- **T-001 (F-05-008 Aflac 突合) は Cloud Run 稼働中** ✅
-- **T-003 (F-05-008 KEN_ALL フォールバック) コミット済 (`7a886db`) / 未デプロイ** ✅
-- **T-004 (F-05-006 住所漢字・カナ突合 案A) コミット済 (`68205c0`) / 未デプロイ** ✅
-- **T-010 (Hexagonal / 可搬性ガードレール) コミット済 / 未デプロイ** ✅
+- **T-001 / T-003 / T-004 / T-010 すべて Cloud Run デプロイ済 + 動作確認 OK** ✅
+  - 5 ケース全部期待通り (health / Aflac ヒット / KEN_ALL フォールバック / F-05-006 整合 OK / F-05-006 整合 NG→補完 OK)
 
 ## いま着手中のタスク
 - なし（セッション終了）
@@ -41,14 +39,18 @@
 
 優先度順:
 
-- **(まず)** Cloud Shell で `make gcb-deploy && make run-deploy` → curl で動作確認
-  - F-05-008 KEN_ALL フォールバック (T-003) — 既デプロイ済み Cloud Run と差分あり
-  - F-05-006 住所漢字・カナ突合 (T-004) — 4 ケース (整合 OK / NG&補完 OK / NG&補完 NG / 補完 OK&KEN_ALL 合流)
-  - **注**: 環境変数名が `AI_CLIENT` → `AI__PROVIDER` に変わっているため、Cloud Run 側の env vars 更新も必要 (`make run-deploy` の `--set-env-vars` は更新済み)
 - **T-005** F-05-005 住所回復処理オーケストレータ
   - 元フロー: `65f74109-84fa-f011-8406-002248f17ef0`
   - F-05-006 (T-004 で実装済み) → F-05-008 (T-001/T-003 で実装済み) を順に呼ぶ親フロー
   - PoC スコープでは F-05-006 を呼ぶだけで F-05-008 は内部委譲しているので、オーケストレータの実装は薄くなる見込み
+- **T-002** Bedrock プロキシ実 AI クライアント
+- **T-006** F-05-007 文字数超過 / F-05-009 中間結果登録
+- **T-007** Cloud SQL 接続 / SqlAlchemyAddressMasterRepository
+- **T-008** Entra ID JWT 検証ミドルウェア
+- **T-009** API Gateway
+
+### スモークテストスクリプト (再利用可)
+将来別エンドポイントを追加したら同形式で `backend/scripts/smoke_test.sh` (※未 commit) を更新する想定。今は git 管理外で `bash scripts/smoke_test.sh ${SERVICE_URL}` でも `bash <貼り付けスクリプト>` でも可
 - **T-002** Bedrock プロキシ実クライアント (Bedrock レスポンス JSON 形式の共有が前提)
 - **T-006** F-05-007 文字数超過チェック / F-05-009 中間結果登録 (T-003 で details に半角カナ変換済みの結果を保持済み → 文字数比較ロジックが本体)
 - **T-007** Cloud SQL 接続 + ORM モデル + SqlAlchemyAddressMasterRepository
