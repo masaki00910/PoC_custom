@@ -5,6 +5,7 @@ from functools import lru_cache
 from app.config import AIClientKind, Settings, get_settings
 from app.domain.interfaces.address_master_repository import AddressMasterRepository
 from app.domain.interfaces.ai_client import AIClient
+from app.domain.rules.address.address_kanji_kana_match import AddressKanjiKanaMatchRule
 from app.domain.rules.address.address_master_match import AddressMasterMatchRule
 from app.infrastructure.ai.fake_client import FakeAIClient
 from app.infrastructure.db.repositories.in_memory_address_master import (
@@ -41,4 +42,12 @@ def get_address_master_match_rule() -> AddressMasterMatchRule:
     return AddressMasterMatchRule(
         ai_client=get_ai_client(),
         address_repo=get_address_master_repository(),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_address_kanji_kana_match_rule() -> AddressKanjiKanaMatchRule:
+    return AddressKanjiKanaMatchRule(
+        ai_client=get_ai_client(),
+        master_match_rule=get_address_master_match_rule(),
     )

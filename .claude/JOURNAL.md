@@ -161,3 +161,57 @@
    - F-05-006 JSON は読解開始済み (要点は STATUS.md の T-004 セクション参照)
    - 先に決めること: SharePoint 画像取得 + メイン書類読取り AI をどこまでモックで再現するか (API 入力に `extracted_address_kanji` を直接渡す形が現実的)
 4. T-005 (F-05-005 オーケストレータ) は T-004 完了後
+
+## 2026-04-30 (T-003 コミット + T-004 F-05-006 案A 実装)
+
+### セッション目的
+1. 前セッションで未コミットだった T-003 を整理してコミット
+2. T-004 (F-05-006 住所漢字・カナ突合) を案A で実装
+
+### この時点までに合意した方針
+- T-003 を先にコミット (`7a886db`) → その後 T-004 着手
+- T-004 は **案A** = SharePoint/OCR (prompt1) は完全スキップし、API 入力で `address_kanji` を直接受け取る
+- `Application.address_kanji` (T-003 で追加済み) をそのまま流用 (= prompt1 出力相当)
+- `CheckRule.execute()` の単一 `CheckResult` 返却契約を維持。元 PA の document_item1/document_item2 別の複数結果は PoC では `details` に集約し、商用化時に複数返却対応を検討
+
+### 元フロー読解メモ (F-05-006)
+- 入力: text(親フロー情報) / text_1(プロンプト) / text_2(属性情報) / text_3(ATLAS登録データ=カナ) / text_4(点検結果テーブル)
+- 処理:
+  1. メイン書類 (SharePoint base64) → AI prompt1 で住所漢字抽出 (案A ではスキップ)
+  2. AI prompt2 で 漢字 vs カナ の整合チェック (`check_result` OK/NG)
+  3. 整合 OK → F-05-008 子フロー呼び出し (text_4='')
+  4. 整合 NG → AI prompt5 で補完試行 (`results` 配列、document_item に "address_kana" 含めば補完済み)
+     - 補完 OK → 補完後カナで F-05-008 呼び出し
+     - 補完 NG → 補完不可結果のみ返す
+
+### 変更内容 (backend)
+- 新規:
+  - `app/domain/rules/address/address_kanji_kana_match.py` (`AddressKanjiKanaMatchRule`, rule_version 1.0.0)
+  - `app/infrastructure/ai/prompts/address_kanji_kana_consistency_v1.txt`
+  - `app/infrastructure/ai/prompts/address_kanji_kana_complement_v1.txt`
+  - `tests/unit/rules/address/test_address_kanji_kana_match.py` (7 件)
+  - `tests/integration/test_api_address_kanji_kana_match.py` (4 件)
+- 変更:
+  - `app/infrastructure/ai/fake_client.py` - `address_kanji_kana_consistency` / `address_kanji_kana_complement` プロンプト対応 (漢字→カナマッピングフィクスチャ)
+  - `app/api/deps.py` - `get_address_kanji_kana_match_rule()` 追加
+  - `app/api/v1/schemas.py` - `AddressKanjiKanaMatchRequest` / `Response` DTO 追加
+  - `app/api/v1/checks.py` - `POST /v1/checks/address-kanji-kana-match` エンドポイント追加
+
+### 設計上の判断
+- **`AddressKanjiKanaMatchRule` は `AddressMasterMatchRule` を依存注入で委譲呼び出し**: F-05-008 のロジックを再実装せず、`Application.address_kana` を補完値で差し替えて (`model_copy(update=...)`) 委譲する。これにより F-05-008 単体での動作互換性も維持
+- **`FakeAIClient` の整合チェック擬似ロジック**: 漢字側に既知フィクスチャ (`神宮前`/`歌舞伎町`/`南青山`/`丸の内`/`美しが丘`) が含まれ、カナ側にも対応する短いカナ (`ジングウマエ` 等) が含まれれば OK、漢字だけマッチでカナ側不一致なら NG (補完候補あり)、漢字フィクスチャ無しなら NG (補完不可)。これで「整合 OK / 整合 NG・補完 OK / 整合 NG・補完 NG / 補完後 KEN_ALL フォールバック」の 4 ケースを網羅できる
+- **複数 CheckResult 返却の見送り**: 元 PA は document_item1 (住所(〒)) と document_item2 (住所カナ) で別々の回復結果を返すが、PoC では単一 `CheckResult` に集約 (recovery_reason に補完 reason を prefix、`details` に整合・補完情報を全て格納)。`CheckRule.execute()` 抽象を変更すると影響範囲が大きいため商用化時の課題として明文化
+- **API 入力契約**: `address_kanji` を必須化 (案A の意図を反映)。F-05-008 の `address_kanji` は KEN_ALL フォールバック専用 (任意) だったが、F-05-006 では必須
+
+### 動作確認結果
+- `pytest -q` → **30 passed in 0.56s** (T-004 単体 7 + 統合 4 + 既存 19)
+- Cloud Run へのデプロイ・curl 動作確認は **次セッションで実施**
+
+### 次セッションへの申し送り
+1. **T-004 を git commit** (新規 5 ファイル、変更 4 ファイル、テスト全 pass 状態)
+2. ユーザーが Cloud Shell で `make gcb-deploy && make run-deploy` → 4 ケース curl 確認
+   - 整合 OK: `address_kanji=東京都渋谷区神宮前..., address_kana=トウキョウトシブヤクジングウマエ...` → 150-0001
+   - 整合 NG & 補完 OK: `address_kanji=...神宮前..., address_kana=トウキョウトチヨダクマルノウチ` → 150-0001 (補完後)
+   - 整合 NG & 補完 NG: `address_kanji=存在しない漢字町, address_kana=ジングウマエ` → NG
+   - 補完 OK & KEN_ALL フォールバック: `address_kanji=...美しが丘..., address_kana=トウキョウトチヨダクマルノウチ` → 225-0002
+3. **T-005 (F-05-005 オーケストレータ)** に進む — F-05-006 が F-05-008 を内部委譲済みなので薄い実装で済む見込み
