@@ -1,26 +1,32 @@
 # プロジェクト現状サマリ
 
-最終更新: 2026-04-30 (T-003 コミット済 7a886db / T-004 ローカル実装完了・未コミット)
+最終更新: 2026-04-30 (T-004 commit 済 68205c0 / T-010 可搬性ガードレール完了)
 
 ## 概要
 保険申込書の一次チェックを AI で自動化するシステムの PoC。Power Automate で動いている既存のエラー回復フローを Python (FastAPI) に移行し、Cloud Run 上で動作させる。3 リポジトリ構成 (frontend / backend / database)。
 
 ## 現在のフェーズ
 - **T-001 (F-05-008 Aflac 突合) は Cloud Run 稼働中** ✅
-- **T-003 (F-05-008 KEN_ALL フォールバック + 全角→半角カナ変換) コミット済 (`7a886db`) / 未デプロイ** ✅
-- **T-004 (F-05-006 住所漢字・カナ突合) ローカル実装完了 / 未コミット・未デプロイ** ✅
-  - 案A 採用 (SharePoint/OCR スキップ、API 入力で address_kanji を直接受け取る)
+- **T-003 (F-05-008 KEN_ALL フォールバック) コミット済 (`7a886db`) / 未デプロイ** ✅
+- **T-004 (F-05-006 住所漢字・カナ突合 案A) コミット済 (`68205c0`) / 未デプロイ** ✅
+- **T-010 (Hexagonal / 可搬性ガードレール) コミット済 / 未デプロイ** ✅
 
 ## いま着手中のタスク
 - なし（セッション終了）
 
 ## 直近完了したタスク
-- **T-004** F-05-006 住所漢字・カナ突合 (案A) — **2026-04-30 完了 (ローカルテストのみ)**
-  - 新規: `AddressKanjiKanaMatchRule` (rule_version 1.0.0)、`address_kanji_kana_consistency_v1.txt`、`address_kanji_kana_complement_v1.txt`、エンドポイント `POST /v1/checks/address-kanji-kana-match`
-  - 変更: `FakeAIClient` (整合チェック・補完プロンプト対応追加)、`api/deps.py` (新ルール DI)、`api/v1/schemas.py` `api/v1/checks.py` (新エンドポイント)
+- **T-010** Hexagonal Architecture / インフラ可搬性ガードレール整備 — **2026-04-30 完了**
+  - ADR-0001 採択 (`backend/docs/adr/0001-hexagonal-portability.md`)
+  - 境界テスト 6 本追加 (`backend/tests/architecture/test_layer_boundaries.py`) — domain → infrastructure 依存禁止 / クラウド SDK 直接 import 禁止を CI で機械検証
+  - `config.py` 再構成: `AIProviderKind` リネーム、`AISettings` + `BedrockProxySettings` のネスト、`env_nested_delimiter='__'` 採用
+  - 連動: `.env.example` / `Makefile` / `README.md` を `AI__PROVIDER` 形式に統一
+  - コメント抽象化: `main.py` `Containerfile` から特定クラウド名を一般化
+  - 全テスト pass: バックエンド 34 + 境界 4 + skip 2 = 40
+
+- **T-004** F-05-006 住所漢字・カナ突合 (案A) — **2026-04-30 完了 (commit 68205c0)**
+  - 案A: SharePoint/OCR スキップ、API 入力で address_kanji を直接受け取る
   - 動作: 整合 OK → F-05-008 委譲 / 整合 NG & 補完 OK → 補完カナで F-05-008 委譲 / 整合 NG & 補完 NG → NG
-  - テスト: 単体 7 + 統合 4 = 計 11 件 pass (バックエンド全体 30 件 pass)
-  - **次セッション TODO**: git commit (T-003 と T-004 を別 commit でも、まとめてでも可) → Cloud Run 再デプロイ → curl 動作確認
+  - テスト: 単体 7 + 統合 4 = 計 11 件 pass
 
 ## 直近完了したタスク
 - **T-003** F-05-008 郵政住所マスタ (KEN_ALL) フォールバック + 全角→半角カナ変換 — **2026-04-28 完了 (ローカルテストのみ)**
@@ -35,8 +41,10 @@
 
 優先度順:
 
-- **(まず)** T-004 を git commit → Cloud Shell で `make gcb-deploy && make run-deploy` → curl で `/v1/checks/address-kanji-kana-match` の 4 ケース動作確認
-  - 整合 OK / 整合 NG & 補完 OK / 整合 NG & 補完 NG / KEN_ALL フォールバック合流
+- **(まず)** Cloud Shell で `make gcb-deploy && make run-deploy` → curl で動作確認
+  - F-05-008 KEN_ALL フォールバック (T-003) — 既デプロイ済み Cloud Run と差分あり
+  - F-05-006 住所漢字・カナ突合 (T-004) — 4 ケース (整合 OK / NG&補完 OK / NG&補完 NG / 補完 OK&KEN_ALL 合流)
+  - **注**: 環境変数名が `AI_CLIENT` → `AI__PROVIDER` に変わっているため、Cloud Run 側の env vars 更新も必要 (`make run-deploy` の `--set-env-vars` は更新済み)
 - **T-005** F-05-005 住所回復処理オーケストレータ
   - 元フロー: `65f74109-84fa-f011-8406-002248f17ef0`
   - F-05-006 (T-004 で実装済み) → F-05-008 (T-001/T-003 で実装済み) を順に呼ぶ親フロー
@@ -75,5 +83,6 @@
 
 ### 規約
 - backend は `backend/CLAUDE.md` に従う（クリーンアーキテクチャ、Podman、Python 3.12+、テスト必須）
+- **インフラ基盤可搬性: ADR-0001 (`backend/docs/adr/0001-hexagonal-portability.md`) に従う。Hexagonal Architecture を厳守。アプリケーションコアはインフラ基盤・クラウド SDK に依存しない。新しい外部依存を追加するときは Port を先に切る。境界テスト (`tests/architecture/test_layer_boundaries.py`) が CI で違反を検出**
 - 個人情報をリポジトリ・ログに出さない
 - スキーマ変更は `database/` リポジトリの責務（backend からマイグレーション実行禁止）

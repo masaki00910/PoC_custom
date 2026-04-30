@@ -142,7 +142,7 @@ gcloud run deploy error-recovery-backend \
   --project=poc-custom \
   --platform=managed \
   --allow-unauthenticated \
-  --set-env-vars=APP_ENV=dev,AI_CLIENT=fake,LOG_LEVEL=INFO \
+  --set-env-vars=APP_ENV=dev,AI__PROVIDER=fake,LOG_LEVEL=INFO \
   --cpu=1 --memory=512Mi --min-instances=0 --max-instances=3
 ```
 

@@ -17,6 +17,19 @@
 - [ ] **T-009** API Gateway 配置（必要に応じて）
 
 ## 完了
+- [x] **T-010** Hexagonal Architecture / インフラ可搬性ガードレール整備 — 2026-04-30 完了
+  - ADR-0001 採択: アプリケーションコアはインフラ基盤に依存しない方針を明文化
+  - 境界テスト追加: domain → infrastructure / クラウド SDK import 禁止を CI で機械検証
+  - `config.py` 再構成: `AIProviderKind` リネーム、`AISettings` + `BedrockProxySettings` ネスト構造、`env_nested_delimiter='__'`
+  - 連動: `.env.example` / `Makefile` / `README.md` を `AI__PROVIDER` 形式に
+  - コメント抽象化: `main.py` `Containerfile` から特定クラウド名を一般化
+  - 撤回: 未実装 Port 雛形 (`SecretsLoader` 等) は実 callers が出るまで追加しない (境界テスト + ADR で同等保護)
+
+- [x] **T-004** F-05-006 住所漢字・カナ突合ルール実装 — 2026-04-30 commit 済 (`68205c0`) / 未デプロイ
+  - 案A 採用: SharePoint/OCR (prompt1) はスキップし、API 入力で `address_kanji` を直接受け取る
+  - 新規: `AddressKanjiKanaMatchRule`, 整合チェック/補完プロンプト 2 本, FakeAIClient 拡張, 新エンドポイント `/v1/checks/address-kanji-kana-match`
+  - テスト: 単体 7 + 統合 4 = 計 11 件 pass
+
 - [x] **T-001** 住所フロー最小移行（F-05-008 単体）— 2026-04-27 完了
   - サブタスク全完了:
     - [x] T-001-1 バックエンド骨格セットアップ
@@ -26,12 +39,6 @@
     - [x] T-001-5 API エンドポイント実装
     - [x] T-001-6 単体テスト 5 + 統合テスト 3 (全 pass)
     - [x] T-001-7 デプロイ手順整備
-- [x] **T-004** F-05-006 住所漢字・カナ突合ルール実装 — 2026-04-30 ローカル完了 (未コミット・未デプロイ)
-  - 案A 採用: SharePoint/OCR (prompt1) はスキップし、API 入力で `address_kanji` を直接受け取る
-  - 新規: `AddressKanjiKanaMatchRule`, 整合チェック/補完プロンプト 2 本, FakeAIClient 拡張, 新エンドポイント `/v1/checks/address-kanji-kana-match`
-  - テスト: 単体 7 + 統合 4 = 計 11 件 pass (リポジトリ全体では 30 件 pass)
-  - **次セッション TODO**: git commit → Cloud Run 再デプロイ → 動作確認
-
 - [x] **T-003** F-05-008 KEN_ALL フォールバック + 全角→半角カナ変換 — 2026-04-28 ローカル完了, 2026-04-30 commit 済 (`7a886db`) / 未デプロイ
   - サブタスク全完了:
     - [x] T-003-1 `JapanPostAddressMasterRecord` エンティティ追加

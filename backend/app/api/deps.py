@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from app.config import AIClientKind, Settings, get_settings
+from app.config import AIProviderKind, Settings, get_settings
 from app.domain.interfaces.address_master_repository import AddressMasterRepository
 from app.domain.interfaces.ai_client import AIClient
 from app.domain.rules.address.address_kanji_kana_match import AddressKanjiKanaMatchRule
@@ -21,14 +21,14 @@ def _settings() -> Settings:
 @lru_cache(maxsize=1)
 def get_ai_client() -> AIClient:
     settings = _settings()
-    match settings.ai_client:
-        case AIClientKind.FAKE:
+    match settings.ai.provider:
+        case AIProviderKind.FAKE:
             return FakeAIClient()
-        case AIClientKind.BEDROCK_PROXY:
+        case AIProviderKind.BEDROCK_PROXY:
             # T-002 で実装予定。現時点では Fake にフォールバックせず明示エラー
             raise NotImplementedError(
                 "BedrockProxyClient は次タスク (T-002) で実装します。"
-                "AI_CLIENT=fake で起動してください。"
+                "AI__PROVIDER=fake で起動してください。"
             )
 
 

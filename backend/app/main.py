@@ -18,8 +18,9 @@ def create_app() -> FastAPI:
         description="保険申込書一次チェック バックエンド (PoC)",
     )
 
-    # 注: `/healthz` は Cloud Run / Knative の queue-proxy が予約しているため使用禁止
-    # (リクエストが queue-proxy に握られてユーザコンテナに届かない)
+    # ヘルスチェックは `/health` を採用。`/healthz` は一部リバースプロキシ層
+    # (Knative queue-proxy 等) が予約パスとして握る環境があり、ユーザコンテナまで
+    # リクエストが届かない事象が発生しうるため避ける。
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:
         return {"status": "ok", "env": settings.app_env.value}

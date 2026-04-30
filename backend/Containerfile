@@ -12,7 +12,7 @@ COPY app ./app
 
 RUN pip install --upgrade pip && pip install .
 
-# Cloud Run は PORT 環境変数を渡してくる (デフォルト 8080)
+# 12-Factor 準拠: PORT 環境変数でリッスンポートを上書き可能 (デフォルト 8080)
 ENV PORT=8080
 EXPOSE 8080
 

@@ -45,7 +45,7 @@ build:
 	podman build -t $(SERVICE_NAME):$(IMAGE_TAG) -f Containerfile .
 
 run:
-	podman run --rm -p 8080:8080 -e AI_CLIENT=fake -e APP_ENV=local $(SERVICE_NAME):$(IMAGE_TAG)
+	podman run --rm -p 8080:8080 -e AI__PROVIDER=fake -e APP_ENV=local $(SERVICE_NAME):$(IMAGE_TAG)
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache __pycache__ *.egg-info dist build
@@ -72,7 +72,7 @@ run-deploy:
 		--project=$(GCP_PROJECT) \
 		--platform=managed \
 		--allow-unauthenticated \
-		--set-env-vars=APP_ENV=dev,AI_CLIENT=fake,LOG_LEVEL=INFO \
+		--set-env-vars=APP_ENV=dev,AI__PROVIDER=fake,LOG_LEVEL=INFO \
 		--cpu=1 --memory=512Mi --min-instances=0 --max-instances=3
 
 deploy: gcb-deploy run-deploy

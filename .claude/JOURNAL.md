@@ -215,3 +215,56 @@
    - 整合 NG & 補完 NG: `address_kanji=存在しない漢字町, address_kana=ジングウマエ` → NG
    - 補完 OK & KEN_ALL フォールバック: `address_kanji=...美しが丘..., address_kana=トウキョウトチヨダクマルノウチ` → 225-0002
 3. **T-005 (F-05-005 オーケストレータ)** に進む — F-05-006 が F-05-008 を内部委譲済みなので薄い実装で済む見込み
+
+## 2026-04-30 (T-010 Hexagonal Architecture / 可搬性ガードレール)
+
+### セッション目的
+ユーザー指摘「特定インフラ基盤に密結合せず、AWS/Azure/オンプレ/k8s どこでも動かせるモデルにしたい」を受け、ガードレールを敷く作業。
+
+### 実施前の状態評価
+- **強い (portable)**: domain 層 (stdlib + pydantic のみ)、AIClient/Repository ABC、依存パッケージにクラウド SDK ゼロ
+- **弱い (GCP 結合)**: `Settings.bedrock_proxy_*` 平坦フィールド、`AIClientKind` がドメイン側に置かれている、`main.py`/`Containerfile` のコメントが Cloud Run 前提、`Makefile`/`cloudbuild.yaml` が GCP 直結
+
+### 採択したアプローチ (B プラン)
+1. ADR を 1 本書く (方針の文書化)
+2. 境界テストを追加 (機械検証)
+3. config 再構成 (プロバイダ平坦フィールド禁止)
+4. コメント抽象化 (特定クラウド名の除去)
+
+撤回: 未実装 Port 雛形 (`SecretsLoader` 等) は実 callers が出るまで追加しない判断。
+理由: 呼び出し側ゼロの ABC は実装時に書き直しコストになる。境界テスト + ADR の手順条文で同等保護が得られる。
+
+### 変更内容
+- 新規:
+  - `backend/docs/adr/0001-hexagonal-portability.md` — Hexagonal Architecture / 可搬性方針の決定記録 (ADR-0001)
+  - `backend/tests/architecture/test_layer_boundaries.py` — 境界テスト 6 本
+- 変更:
+  - `backend/app/config.py` — `AIClientKind` → `AIProviderKind`、`AISettings` (provider + ネスト) + `BedrockProxySettings`、`env_nested_delimiter='__'`
+  - `backend/app/api/deps.py` — `settings.ai.provider` 参照に追従
+  - `backend/.env.example` — `AI__PROVIDER` 形式に
+  - `backend/Makefile` — env vars 更新 (`run` ターゲット、`run-deploy` の `--set-env-vars`)
+  - `backend/README.md` — Cloud Run デプロイコマンド例の env vars
+  - `backend/app/main.py` — ヘルスチェック由来コメントから "Cloud Run / Knative queue-proxy" 言及を抽象化 (リバースプロキシ層)
+  - `backend/Containerfile` — `PORT` 由来コメントを Cloud Run 前提から 12-Factor 準拠の表現に
+- `.claude/STATUS.md` `.claude/TASKS.md` — T-010 完了反映、可搬性方針リンクを「重要な前提」に追加
+
+### 設計上の判断
+- **Hexagonal Architecture を「採用する」と明文化することの価値**: CLAUDE.md §2 で既にレイヤー構成は規定済みだが、「インフラ可搬性が目的」と明記することで、判断の基準軸 (依存方向 + クラウド非結合) が言語化された。次以降の PR レビューで効く
+- **境界テストは ast 解析**: `import-linter` 等の専用ツール導入は依存追加のため避け、ast の `Import`/`ImportFrom` を直接走査するシンプルな実装。チェック対象が増えても prefix を追加するだけで拡張可能
+- **`env_nested_delimiter='__'`**: `pydantic-settings` 標準。`AI__BEDROCK_PROXY__URL` のように `<category>__<provider>__<field>` の形で表現できる。プロバイダが増えても平坦化しない
+- **`AIProviderKind` enum を `config.py` に残した**: 厳密には infrastructure 関心事だが、Settings の型として参照する以上 config から見える必要がある。ドメインはこの enum を参照しないので問題なし
+
+### 動作確認結果
+- `pytest -q` → **40 件 pass + 2 件 skip** (T-004 commit 後のリポジトリ全体で)
+- 境界テスト: domain → infrastructure 依存なし / クラウド SDK 直 import なし / main.py / config.py がクラウド SDK 非依存、を機械検証
+- Cloud Run デプロイは未実施 (次セッション)
+
+### コミット構成
+- コミット1: `68205c0` feat(backend): F-05-006 住所漢字・カナ突合 (案A)
+- コミット2: ADR + 可搬性ガードレール一式 (このセクション)
+
+### 次セッションへの申し送り
+1. ユーザーが Cloud Shell で `git pull` → `make gcb-deploy && make run-deploy`
+   - **重要**: 環境変数名が変わったので Cloud Run の env vars が `AI__PROVIDER` を読むように更新される (Makefile 経由なら自動)
+2. T-003 / T-004 の curl 動作確認 (STATUS.md の「次にやること」参照)
+3. T-005 (F-05-005 オーケストレータ) に進む
