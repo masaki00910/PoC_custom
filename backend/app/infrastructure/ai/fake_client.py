@@ -50,6 +50,60 @@ _ADDRESS_KANA_SPLIT_FIXTURES: list[tuple[str, Mapping[str, str]]] = [
     ),
 ]
 
+# 漢字住所分割 (郵政住所マスタ突合の前段) 用の固定応答。
+_ADDRESS_KANJI_SPLIT_FIXTURES: list[tuple[str, Mapping[str, str]]] = [
+    (
+        "神宮前",
+        {
+            "prefecture_name": "東京都",
+            "municipality_name": "渋谷区",
+            "town_name": "神宮前",
+        },
+    ),
+    (
+        "歌舞伎町",
+        {
+            "prefecture_name": "東京都",
+            "municipality_name": "新宿区",
+            "town_name": "歌舞伎町",
+        },
+    ),
+    (
+        "南青山",
+        {
+            "prefecture_name": "東京都",
+            "municipality_name": "港区",
+            "town_name": "南青山",
+        },
+    ),
+    (
+        "丸の内",
+        {
+            "prefecture_name": "東京都",
+            "municipality_name": "千代田区",
+            "town_name": "丸の内",
+        },
+    ),
+    # 郵政住所マスタフォールバックで OK になるケース (Aflac マスタには存在しない住所)
+    (
+        "美しが丘",
+        {
+            "prefecture_name": "神奈川県",
+            "municipality_name": "横浜市青葉区",
+            "town_name": "美しが丘",
+        },
+    ),
+    # 郵政住所マスタでも 0 件のケース (NG)
+    (
+        "存在しない町",
+        {
+            "prefecture_name": "東京都",
+            "municipality_name": "存在しない区",
+            "town_name": "存在しない町",
+        },
+    ),
+]
+
 
 class FakeAIClient(AIClient):
     """ローカル開発・テスト用の決定的 AI クライアント。
@@ -66,41 +120,55 @@ class FakeAIClient(AIClient):
         correlation_id: str,
     ) -> AIPrediction:
         if prompt_name == "address_kana_split":
-            return self._predict_address_kana_split(input_payload, correlation_id)
+            return self._predict_with_fixtures(
+                prompt_name=prompt_name,
+                fixtures=_ADDRESS_KANA_SPLIT_FIXTURES,
+                input_text=input_payload.get("address_kana", ""),
+                empty_keys=("prefecture_kana", "municipality_kana", "oaza_kana", "aza_cho_kana"),
+                correlation_id=correlation_id,
+            )
+        if prompt_name == "address_kanji_split":
+            return self._predict_with_fixtures(
+                prompt_name=prompt_name,
+                fixtures=_ADDRESS_KANJI_SPLIT_FIXTURES,
+                input_text=input_payload.get("address_kanji", ""),
+                empty_keys=("prefecture_name", "municipality_name", "town_name"),
+                correlation_id=correlation_id,
+            )
         raise AIPredictionError(f"FakeAIClient does not support prompt '{prompt_name}'")
 
-    def _predict_address_kana_split(
+    def _predict_with_fixtures(
         self,
-        input_payload: Mapping[str, str],
+        *,
+        prompt_name: str,
+        fixtures: list[tuple[str, Mapping[str, str]]],
+        input_text: str,
+        empty_keys: tuple[str, ...],
         correlation_id: str,
     ) -> AIPrediction:
-        address_kana = input_payload.get("address_kana", "")
-        for substring, structured in _ADDRESS_KANA_SPLIT_FIXTURES:
-            if substring in address_kana:
+        for substring, structured in fixtures:
+            if substring in input_text:
                 logger.info(
-                    "fake_ai_match prompt=address_kana_split correlation_id=%s match=%s",
+                    "fake_ai_match prompt=%s correlation_id=%s match=%s",
+                    prompt_name,
                     correlation_id,
                     substring,
                 )
                 return AIPrediction(
-                    prompt_name="address_kana_split",
+                    prompt_name=prompt_name,
                     prompt_version="v1-fake",
                     raw_text=json.dumps(structured, ensure_ascii=False),
                     structured=structured,
                 )
 
         logger.info(
-            "fake_ai_unmatched prompt=address_kana_split correlation_id=%s",
+            "fake_ai_unmatched prompt=%s correlation_id=%s",
+            prompt_name,
             correlation_id,
         )
-        empty: Mapping[str, str] = {
-            "prefecture_kana": "",
-            "municipality_kana": "",
-            "oaza_kana": "",
-            "aza_cho_kana": "",
-        }
+        empty: Mapping[str, str] = {k: "" for k in empty_keys}
         return AIPrediction(
-            prompt_name="address_kana_split",
+            prompt_name=prompt_name,
             prompt_version="v1-fake",
             raw_text=json.dumps(empty, ensure_ascii=False),
             structured=empty,

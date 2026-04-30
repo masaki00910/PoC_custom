@@ -7,9 +7,13 @@
 - [ ] **T-002** Bedrock プロキシ実クライアント実装（`BedrockProxyClient` を `AIClient` 抽象に差し込み）
   - 前提: ユーザーから Bedrock プロキシのレスポンス形式共有
   - リクエスト形式は判明済: `{"message": "...", "model": "global.anthropic.claude-sonnet-4-6"}`
-- [ ] **T-003** F-05-008 郵政住所マスタフォールバック実装（KEN_ALL 突合 + 全角→半角カナ変換）
 - [ ] **T-004** F-05-006 住所漢字・カナ突合ルール実装
+  - 元フロー: `ff08e2ed-7001-f111-8406-002248ef6599` (【エラー回復】F-05-006_住所漢字・カナ突合)
+  - 主要ロジック: メイン書類読取り → 漢字とカナの整合チェック → (整合 OK) F-05-008 突合 / (整合 NG) 漢字・カナ補完 → 補完後 F-05-008 突合
+  - 要相談: SharePoint 画像取得 + メイン書類読取り AI をどこまでモックで再現するか
 - [ ] **T-005** F-05-005 住所回復処理（オーケストレータ）実装
+  - 元フロー: `65f74109-84fa-f011-8406-002248f17ef0` (【エラー回復】F-05-005_項目補正-住所回復処理)
+  - F-05-006 → F-05-008 を順に呼ぶ親フロー
 - [ ] **T-006** F-05-007 文字数超過チェック・F-05-009 中間結果登録 子フロー本体実装
 - [ ] **T-007** Cloud SQL 接続 + ORM モデル + SqlAlchemyAddressMasterRepository
   - 前提: Cloud SQL Admin API 有効化 + インスタンス作成（ユーザー作業）
@@ -19,13 +23,26 @@
 ## 完了
 - [x] **T-001** 住所フロー最小移行（F-05-008 単体）— 2026-04-27 完了
   - サブタスク全完了:
-    - [x] T-001-1 バックエンド骨格セットアップ（pyproject / Containerfile / cloudbuild.yaml / Makefile / config）
-    - [x] T-001-2 ドメイン層実装（CheckRule 抽象 / エンティティ / インターフェース）
-    - [x] T-001-3 F-05-008 住所マスタ突合ルール実装
-    - [x] T-001-4 インフラ Fake/InMemory 実装（FakeAIClient + InMemoryAddressMasterRepository）
-    - [x] T-001-5 API エンドポイント実装（/v1/checks/address-master-match + /healthz）
+    - [x] T-001-1 バックエンド骨格セットアップ
+    - [x] T-001-2 ドメイン層実装
+    - [x] T-001-3 F-05-008 住所マスタ突合ルール実装 (Aflac のみ)
+    - [x] T-001-4 インフラ Fake/InMemory 実装
+    - [x] T-001-5 API エンドポイント実装
     - [x] T-001-6 単体テスト 5 + 統合テスト 3 (全 pass)
-    - [x] T-001-7 デプロイ手順整備（Makefile + cloudbuild.yaml + README）
+    - [x] T-001-7 デプロイ手順整備
+- [x] **T-003** F-05-008 KEN_ALL フォールバック + 全角→半角カナ変換 — 2026-04-28 ローカル完了 (未コミット・未デプロイ)
+  - サブタスク全完了:
+    - [x] T-003-1 `JapanPostAddressMasterRecord` エンティティ追加
+    - [x] T-003-2 `find_japan_post_by_prefecture_municipality_town` リポジトリインターフェース追加
+    - [x] T-003-3 `Application` に `address_kanji` フィールド追加
+    - [x] T-003-4 `kana_converter.py` 新規 (PA フローの 78 文字マッピング忠実コピー)
+    - [x] T-003-5 `AddressMasterMatchRule` に KEN_ALL フォールバック分岐追加 (rule_version 1.0.0 → 1.1.0)
+    - [x] T-003-6 `FakeAIClient` に `address_kanji_split` プロンプト対応追加 (フィクスチャ整理含む)
+    - [x] T-003-7 `InMemoryAddressMasterRepository` に KEN_ALL フィクスチャ + メソッド追加
+    - [x] T-003-8 プロンプトファイル `address_kanji_split_v1.txt` 追加
+    - [x] T-003-9 API スキーマに `address_kanji` フィールド追加
+    - [x] T-003-10 単体・統合テスト追加 (kana_converter 6 + 統合 5 + 既存テスト更新 = 計 19 件 pass)
+  - **次セッション TODO**: git commit → Cloud Run 再デプロイ → 動作確認
 
 ## 保留・廃止
 （なし）

@@ -106,3 +106,58 @@
 - **`details` フィールド**: `CheckResult.details` に AI プロンプト名・バージョン・生レスポンスを格納し、CLAUDE.md §7 (AI 説明可能性) に対応
 - **`cloudbuild.yaml`**: `gcloud builds submit --tag` は Dockerfile 固定のため、CLAUDE.md §10 の Containerfile 命名規約と Cloud Build を両立させる目的で追加
 - **`@lru_cache` for DI**: Settings/AIClient/Repository/Rule は全アプリ寿命でシングルトン化。Pydantic Settings の env 読み込みも 1 回のみ
+
+## 2026-04-28 (T-003 KEN_ALL フォールバック実装)
+
+### セッション目的
+住所まわりの一次チェックロジックの追加移行。T-003 → T-004 → T-005 の順に進める方針合意 → T-003 のみ完了したところで一旦停止。
+
+### この時点までに合意した方針
+- 元フローは `sample_modernflows/` 配下の **【エラー回復】(live, StateCode=Activated)** 版を正とする (【工藤修正中】=draft は参照しない)
+- T-001 と同じく「F-05-008 の延長」として T-003 を進め、Aflac ヒット 0 件分岐を埋める
+- F-05-007 文字数超過チェックの子フロー呼び出しは T-003 のスコープ外 (T-006 で別実装)
+
+### 元フロー読解メモ (F-05-008 KEN_ALL フォールバック分岐)
+- Aflac マスタ 0 件のとき:
+  1. AI 「住所漢字分割」(prompt4) で `text_3` (契約申込書) → 都道府県名/市区町村名/町域名 に 3 分割
+  2. `ca_japan_post_address_masters` を `ca_prefecture_name` AND `ca_municipality_name` AND `ca_town_name` の完全一致で絞り込み
+  3. ヒット 0 件 → NG (`recovery_reason: "[XX住所(該当〒番号なし)]問合せ"`)
+  4. ヒット 1+ 件:
+     - 郵便番号で重複削除 → 1 種類なら OK + KEN_ALL マスタ側のカナ列を連結 → 全角→半角カナ変換 (PA フローに hardcoded された 78 文字マッピング辞書を忠実に使用)
+     - 複数 → ビジネスエラー (PA は空 Scope。Python では NG として明示)
+- recovery_reason (KEN_ALL OK): `[XX住所(〒・カナ)]　郵便局住所マスタにて強制回復※「字・大字」有の場合は、除外の上、AFLAC住所マスタで要検索`
+- recovery_process (KEN_ALL): `エラー回復(郵便局住所マスタ突合)よりロジック判定`
+
+### 変更内容 (backend)
+- 新規:
+  - `app/domain/rules/address/kana_converter.py` (78 文字マッピング辞書 + `to_halfwidth_kana()`)
+  - `app/infrastructure/ai/prompts/address_kanji_split_v1.txt`
+  - `tests/unit/rules/address/test_kana_converter.py` (6 件)
+- 変更:
+  - `app/domain/entities/master_data.py` - `JapanPostAddressMasterRecord` 追加
+  - `app/domain/interfaces/address_master_repository.py` - `find_japan_post_by_prefecture_municipality_town` 抽象メソッド追加
+  - `app/domain/entities/application.py` - `address_kanji: str = ""` 追加 (text_3 相当、後方互換)
+  - `app/domain/rules/address/address_master_match.py` - rule_version 1.0.0 → 1.1.0、`_fallback_japan_post()` メソッド追加、Aflac 0 件 → KEN_ALL フォールバック合流ロジック
+  - `app/infrastructure/ai/fake_client.py` - `address_kanji_split` プロンプト対応 (汎用化されたフィクスチャ実装)
+  - `app/infrastructure/db/repositories/in_memory_address_master.py` - KEN_ALL フィクスチャ追加 (横浜市青葉区美しが丘・港区南青山) + メソッド実装
+  - `app/api/v1/schemas.py` / `app/api/v1/checks.py` - リクエスト DTO に `address_kanji` 追加
+  - `tests/integration/test_api_address_master_match.py` - フォールバック OK / NG ケース追加
+  - `tests/unit/rules/address/test_address_master_match.py` - フォールバック 3 ケース追加 + 既存 1 ケースの期待値更新 (空カナ分割時は KEN_ALL に合流するためメッセージ変更)
+
+### 設計上の判断
+- **空カナ分割の扱い**: 当初は「カナ分割で必須フィールドが空 → 即 NG」として実装したが、PA フローは Aflac ヒット 0 件 → KEN_ALL に合流する流れだったので、空カナ分割でも Aflac をスキップして KEN_ALL に進む形に修正。これで「漢字住所のみ取得できる」ケースも自動回復可能になる
+- **半角カナ変換**: PA フローの MappingList Compose に hardcoded された 78 文字マッピングを Python に忠実コピー。`unicodedata.normalize` や `jaconv` のような汎用ライブラリは使わず、マスタ値との照合互換性を優先 (ヴ等 PA に無い文字はそのまま保持)
+- **ビジネスエラーの扱い**: PA フローでは空 Scope (結果配列に何も追加しない) で正常応答する動作。Python のルール契約は `execute() -> CheckResult` で必ず1つの結果を返す前提のため、NG として「自動回復不可（候補件数=N）」と recovery_reason に明示
+- **半角カナの details 格納**: F-05-007 文字数超過チェック (T-006) で使うため `details["address_kana_halfwidth"]` に格納しておく
+
+### 動作確認結果
+- `pytest -q` → **19 passed in 0.72s** (単体 14 + 統合 5)
+- Cloud Run へのデプロイ・curl 動作確認は **次セッションで実施**
+
+### 次セッションへの申し送り
+1. **T-003 を git commit** (10 ファイル変更 + 3 ファイル追加、全テスト pass 状態)
+2. ユーザーが Cloud Shell で `make gcb-deploy && make run-deploy` → curl で `address_kanji` を含むペイロードでフォールバック動作確認
+3. **T-004 (F-05-006 住所漢字・カナ突合)** に進む
+   - F-05-006 JSON は読解開始済み (要点は STATUS.md の T-004 セクション参照)
+   - 先に決めること: SharePoint 画像取得 + メイン書類読取り AI をどこまでモックで再現するか (API 入力に `extracted_address_kanji` を直接渡す形が現実的)
+4. T-005 (F-05-005 オーケストレータ) は T-004 完了後

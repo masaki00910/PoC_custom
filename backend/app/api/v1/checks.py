@@ -30,6 +30,7 @@ async def address_master_match(
     application = Application(
         application_id=ApplicationId(request.application_id),
         address_kana=request.address_kana,
+        address_kanji=request.address_kanji,
     )
     context = CheckContext(
         correlation_id=correlation_id,

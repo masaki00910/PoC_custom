@@ -12,6 +12,13 @@ class AddressMasterMatchRequest(BaseModel):
 
     application_id: UUID = Field(..., description="申込 ID (UUID)")
     address_kana: str = Field(..., description="補完後の住所カナ (元 PA の text_4 相当)")
+    address_kanji: str = Field(
+        default="",
+        description=(
+            "契約申込書の住所漢字 (元 PA の text_3 相当)。"
+            "Aflac 住所マスタにヒットしなかった場合の郵政住所マスタ (KEN_ALL) フォールバックで使用。"
+        ),
+    )
     attribute: str = Field("新", description="新住所/旧住所などの属性 (recovery_reason に埋め込み)")
     document_item: str = Field(
         "申込書住所カナ",
