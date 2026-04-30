@@ -7,16 +7,29 @@
 - [ ] **T-002** Bedrock プロキシ実クライアント実装（`BedrockProxyClient` を `AIClient` 抽象に差し込み）
   - 前提: ユーザーから Bedrock プロキシのレスポンス形式共有
   - リクエスト形式は判明済: `{"message": "...", "model": "global.anthropic.claude-sonnet-4-6"}`
-- [ ] **T-005** F-05-005 住所回復処理（オーケストレータ）実装
-  - 元フロー: `65f74109-84fa-f011-8406-002248f17ef0` (【エラー回復】F-05-005_項目補正-住所回復処理)
-  - F-05-006 → F-05-008 を順に呼ぶ親フロー
-- [ ] **T-006** F-05-007 文字数超過チェック・F-05-009 中間結果登録 子フロー本体実装
+- [ ] **T-006** F-05-007 文字数超過チェック (Stub 解消) + F-05-009 中間結果登録 実装
+  - F-05-007 元フロー: `92c9430a-9f01-f111-8406-002248ef6599`
+  - 現在 `app/domain/rules/text/char_limit_check.py` が Stub (status=NG, details.todo_task=T-006)
+  - 入力: T-003 が details に格納済の `address_kana_halfwidth` (半角カナ)
 - [ ] **T-007** Cloud SQL 接続 + ORM モデル + SqlAlchemyAddressMasterRepository
   - 前提: Cloud SQL Admin API 有効化 + インスタンス作成（ユーザー作業）
 - [ ] **T-008** Entra ID JWT 検証ミドルウェア
 - [ ] **T-009** API Gateway 配置（必要に応じて）
+- [ ] **T-011** 住所既契約突合チェック (Stub 解消)
+  - 現在 `app/domain/rules/contract/existing_contract_match.py` が Stub (status=NG, details.todo_task=T-011)
+  - 元 PA: 既契約有無 AI → メイン書類読取 AI → 既契約突合 AI の 3 段プロンプト
+  - PoC スコープ外。要件確定後に実装
 
 ## 完了
+- [x] **T-005** F-05-005 住所回復処理オーケストレータ実装 — 2026-04-30 完了 (未コミット)
+  - `application/` レイヤー新設 (ADR-0001 のレイヤー構成に最初の実体投入)
+  - `app/application/run_address_recovery.py` `RunAddressRecovery` ユースケース
+  - 元 PA の郵便番号チェック / error_flag / ca_id 分岐を移植
+  - Stub 2 件 (T-006 / T-011) を `domain/rules/contract/` `domain/rules/text/` に追加。エラーで落ちず status=NG + details.todo_task で識別可能
+  - 新エンドポイント `POST /v1/checks/address-recovery` (戻り値 `list[CheckResult]`)
+  - テスト: orchestrator 9 + Stub 2 + 統合 4 = 計 15 件、全体 51 件 pass
+  - 副次効果: 境界テストの `application/` 関連 2 件が skip → pass に (ADR-0001 ガードレールが application 層で稼働開始)
+
 - [x] **T-010** Hexagonal Architecture / インフラ可搬性ガードレール整備 — 2026-04-30 完了
   - ADR-0001 採択: アプリケーションコアはインフラ基盤に依存しない方針を明文化
   - 境界テスト追加: domain → infrastructure / クラウド SDK import 禁止を CI で機械検証

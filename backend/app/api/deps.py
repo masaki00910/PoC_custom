@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from app.application.run_address_recovery import RunAddressRecovery
 from app.config import AIProviderKind, Settings, get_settings
 from app.domain.interfaces.address_master_repository import AddressMasterRepository
 from app.domain.interfaces.ai_client import AIClient
 from app.domain.rules.address.address_kanji_kana_match import AddressKanjiKanaMatchRule
 from app.domain.rules.address.address_master_match import AddressMasterMatchRule
+from app.domain.rules.contract.existing_contract_match import ExistingContractMatchRule
+from app.domain.rules.text.char_limit_check import CharLimitCheckRule
 from app.infrastructure.ai.fake_client import FakeAIClient
 from app.infrastructure.db.repositories.in_memory_address_master import (
     InMemoryAddressMasterRepository,
@@ -50,4 +53,23 @@ def get_address_kanji_kana_match_rule() -> AddressKanjiKanaMatchRule:
     return AddressKanjiKanaMatchRule(
         ai_client=get_ai_client(),
         master_match_rule=get_address_master_match_rule(),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_existing_contract_match_rule() -> ExistingContractMatchRule:
+    return ExistingContractMatchRule()
+
+
+@lru_cache(maxsize=1)
+def get_char_limit_check_rule() -> CharLimitCheckRule:
+    return CharLimitCheckRule()
+
+
+@lru_cache(maxsize=1)
+def get_run_address_recovery() -> RunAddressRecovery:
+    return RunAddressRecovery(
+        kanji_kana_match=get_address_kanji_kana_match_rule(),
+        existing_contract_match=get_existing_contract_match_rule(),
+        char_limit_check=get_char_limit_check_rule(),
     )

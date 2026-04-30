@@ -1,18 +1,29 @@
 # プロジェクト現状サマリ
 
-最終更新: 2026-04-30 (T-003/T-004/T-010 デプロイ + 動作確認完了)
+最終更新: 2026-04-30 (T-005 オーケストレータ実装完了 / 未コミット)
 
 ## 概要
 保険申込書の一次チェックを AI で自動化するシステムの PoC。Power Automate で動いている既存のエラー回復フローを Python (FastAPI) に移行し、Cloud Run 上で動作させる。3 リポジトリ構成 (frontend / backend / database)。
 
 ## 現在のフェーズ
-- **T-001 / T-003 / T-004 / T-010 すべて Cloud Run デプロイ済 + 動作確認 OK** ✅
-  - 5 ケース全部期待通り (health / Aflac ヒット / KEN_ALL フォールバック / F-05-006 整合 OK / F-05-006 整合 NG→補完 OK)
+- **T-001 / T-003 / T-004 / T-010 Cloud Run デプロイ済 + 動作確認 OK** ✅
+- **T-005 (F-05-005 オーケストレータ) ローカル実装完了 / 未コミット・未デプロイ** ✅
+  - `application/` レイヤー新設 (ADR-0001 に従う形で最初の実体投入)
+  - 未実装ブランチ (T-006 文字数超過 / T-011 既契約突合) は Stub で配線済 → 後続実装で差し替えるだけ
 
 ## いま着手中のタスク
 - なし（セッション終了）
 
 ## 直近完了したタスク
+- **T-005** F-05-005 住所回復処理オーケストレータ — **2026-04-30 完了 (未コミット)**
+  - `app/application/run_address_recovery.py` 新規 (`RunAddressRecovery` ユースケース)
+  - 元 PA の分岐を全網羅: 郵便番号 "000"/"*000" + 既契約突合 / error_flag + 漢字カナ突合 / それ以外 + 文字数超過
+  - Stub × 2: `ExistingContractMatchRule` (T-011) / `CharLimitCheckRule` (T-006)。`status=NG` + `details.todo_task` を返す → エラーで落ちず後続実装で差し替えるだけ
+  - 新エンドポイント `POST /v1/checks/address-recovery` (戻り値 `list[CheckResult]` = 元 PA の `回復結果` 配列)
+  - 動作: 元 PA フローを「頭から流せる」状態に到達。既契約突合パスでは Stub NG → F-05-006 にフォールバックして実回復
+  - テスト: orchestrator 9 + Stub 2 + 統合 4 = 15 件、全体 51 件 pass。境界テスト `application/→infrastructure/` 依存禁止が稼働開始
+  - **次セッション TODO**: git commit → push → Cloud Run 再デプロイ → curl 動作確認
+
 - **T-010** Hexagonal Architecture / インフラ可搬性ガードレール整備 — **2026-04-30 完了**
   - ADR-0001 採択 (`backend/docs/adr/0001-hexagonal-portability.md`)
   - 境界テスト 6 本追加 (`backend/tests/architecture/test_layer_boundaries.py`) — domain → infrastructure 依存禁止 / クラウド SDK 直接 import 禁止を CI で機械検証
@@ -39,15 +50,13 @@
 
 優先度順:
 
-- **T-005** F-05-005 住所回復処理オーケストレータ
-  - 元フロー: `65f74109-84fa-f011-8406-002248f17ef0`
-  - F-05-006 (T-004 で実装済み) → F-05-008 (T-001/T-003 で実装済み) を順に呼ぶ親フロー
-  - PoC スコープでは F-05-006 を呼ぶだけで F-05-008 は内部委譲しているので、オーケストレータの実装は薄くなる見込み
+- **(まず)** T-005 を git commit → push → Cloud Run 再デプロイ → curl で動作確認
+  - 4 パス確認推奨: (1) 郵便番号 "000" + 既契約突合 → Stub→F-05-006 (2) error_flag=true + 漢字カナ突合 (3) 文字数超過 (Stub) (4) 未知 document_item → 空配列
+- **T-006** F-05-007 文字数超過 (Stub 解消) + F-05-009 中間結果登録
 - **T-002** Bedrock プロキシ実 AI クライアント
-- **T-006** F-05-007 文字数超過 / F-05-009 中間結果登録
 - **T-007** Cloud SQL 接続 / SqlAlchemyAddressMasterRepository
 - **T-008** Entra ID JWT 検証ミドルウェア
-- **T-009** API Gateway
+- **T-011** 既契約突合 (Stub 解消) — PoC スコープ外、要件確定後
 
 ### スモークテストスクリプト (再利用可)
 将来別エンドポイントを追加したら同形式で `backend/scripts/smoke_test.sh` (※未 commit) を更新する想定。今は git 管理外で `bash scripts/smoke_test.sh ${SERVICE_URL}` でも `bash <貼り付けスクリプト>` でも可
